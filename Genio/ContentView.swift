@@ -5,6 +5,8 @@ struct ContentView: View {
   @ObservedObject var glasses: Glasses
   @State private var showSettings = false
 
+  private var glassesReady: Bool { glasses.status == .streaming }
+
   var body: some View {
     NavigationStack {
       ScrollView {
@@ -25,12 +27,16 @@ struct ContentView: View {
             .accessibilityLabel(Text("Settings"))
           }
 
-          GenioOrb(active: genio.active, thinking: genio.thinking) { genio.toggle() }
-            .padding(.top, 4)
+          GenioOrb(active: genio.active, thinking: genio.thinking, available: glassesReady || genio.active) {
+            genio.toggle()
+          }
+          .padding(.top, 4)
 
           Group {
             if genio.active {
               Text("Say \"done\", \"repeat\", \"back\" or \"new task\". Start a question with \"Genio\".")
+            } else if !glassesReady {
+              Text("Connect the glasses first: GENIO needs their camera, button and microphone.")
             } else {
               Text("Press the button on your glasses or tap here. For a quick question say \"Genio, …\".")
             }
@@ -59,6 +65,10 @@ struct ContentView: View {
       }
       .background(Color(.systemGroupedBackground).ignoresSafeArea())
       .toolbar(.hidden, for: .navigationBar)
+      // Glasses gone while GENIO is on (folded, out of range): stop it.
+      .onChange(of: glasses.status) { _, status in
+        if status != .streaming && genio.active { genio.stop() }
+      }
       .sheet(isPresented: $showSettings) {
         SettingsView(genio: genio, glasses: glasses)
       }
@@ -71,19 +81,26 @@ struct ContentView: View {
 struct GenioOrb: View {
   let active: Bool
   let thinking: Bool
+  /// False while the glasses are not connected: the orb is greyed out and
+  /// does nothing.
+  let available: Bool
   let action: () -> Void
+
+  private var colors: [Color] {
+    if active { return [Color.genioGold, Color.orange] }
+    if available { return [Color.genioViolet, Color.genioNight] }
+    return [Color(.systemGray3), Color(.systemGray5)]
+  }
 
   var body: some View {
     Button(action: action) {
       ZStack {
         Circle()
-          .fill(
-            LinearGradient(
-              colors: active ? [Color.genioGold, Color.orange] : [Color.genioViolet, Color.genioNight],
-              startPoint: .topLeading,
-              endPoint: .bottomTrailing))
+          .fill(LinearGradient(colors: colors, startPoint: .topLeading, endPoint: .bottomTrailing))
           .frame(width: 184, height: 184)
-          .shadow(color: (active ? Color.genioGold : Color.genioViolet).opacity(0.45), radius: active ? 28 : 14, y: 6)
+          .shadow(
+            color: (active ? Color.genioGold : Color.genioViolet).opacity(available ? 0.45 : 0),
+            radius: active ? 28 : 14, y: 6)
         VStack(spacing: 6) {
           if thinking {
             ProgressView()
@@ -97,17 +114,21 @@ struct GenioOrb: View {
           Text(verbatim: "GENIO")
             .font(.system(size: 22, weight: .heavy, design: .rounded))
             .tracking(3)
-          (active ? Text("on") : Text("paused"))
+          (active ? Text("on") : (available ? Text("paused") : Text("glasses not connected")))
             .font(.caption.weight(.medium))
             .opacity(0.8)
         }
-        .foregroundStyle(active ? Color.genioNight : Color.white)
+        .foregroundStyle(active ? Color.genioNight : (available ? Color.white : Color.secondary))
       }
     }
     .buttonStyle(.plain)
+    .disabled(!available)
     .animation(.spring(response: 0.35, dampingFraction: 0.7), value: active)
+    .animation(.easeInOut(duration: 0.2), value: available)
     .sensoryFeedback(.impact(weight: .medium), trigger: active)
-    .accessibilityLabel(active ? Text("GENIO is on. Tap to stop") : Text("Start GENIO"))
+    .accessibilityLabel(
+      active ? Text("GENIO is on. Tap to stop")
+        : (available ? Text("Start GENIO") : Text("GENIO: connect the glasses first")))
   }
 }
 

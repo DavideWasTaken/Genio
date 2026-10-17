@@ -137,6 +137,11 @@ final class GenioController: ObservableObject {
 
   func start() {
     guard !active else { return }
+    // No glasses, no GENIO: it needs their camera, button and microphone.
+    guard glasses.status == .streaming else {
+      note("GENIO needs the glasses connected first")
+      return
+    }
     active = true
     UIApplication.shared.isIdleTimerDisabled = true
     voice.configure(route: Voice.Route(rawValue: defaults.string(forKey: SettingKey.audioRoute) ?? "") ?? .media)

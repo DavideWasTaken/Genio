@@ -251,6 +251,16 @@
         }
       }
     },
+    "Connect the glasses first: GENIO needs their camera, button and microphone.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prima connetti gli occhiali: a GENIO servono la loro camera, il tasto e il microfono."
+          }
+        }
+      }
+    },
     "Connected": {
       "localizations": {
         "it": {
@@ -347,6 +357,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "GENIO attivo. Tocca per fermare"
+          }
+        }
+      }
+    },
+    "GENIO: connect the glasses first": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GENIO: prima connetti gli occhiali"
           }
         }
       }
@@ -927,6 +947,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "collegati"
+          }
+        }
+      }
+    },
+    "glasses not connected": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "occhiali non connessi"
           }
         }
       }
