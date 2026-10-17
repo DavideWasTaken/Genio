@@ -151,7 +151,7 @@ def draw_frame(base, s, lenses, tops, color, t, bridge_y, cx):
 
 # ---------------------------------------------------------------- variants
 
-def glasses_layout(s, scale=1.06, cy=0.60):
+def glasses_layout(s, scale=1.06, cy=0.515):
     w, h = s * 0.355 * scale, s * 0.25 * scale
     gap = s * 0.07 * scale
     y = s * cy - h / 2
