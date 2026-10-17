@@ -57,8 +57,8 @@ flowchart LR
 
 ```bash
 brew install xcodegen
-git clone https://github.com/DavideWasTaken/genio.git
-cd genio
+git clone https://github.com/DavideWasTaken/Genio.git
+cd Genio
 cp Config/Local.xcconfig.example Config/Local.xcconfig   # then put your Team ID and a bundle id in it
 xcodegen generate
 open Genio.xcodeproj
