@@ -448,24 +448,85 @@ private final class LoopbackListener: @unchecked Sendable {
 
   private func handle(_ connection: NWConnection) {
     connection.start(queue: queue)
-    connection.receive(minimumIncompleteLength: 1, maximumLength: 16_384) { [weak self] data, _, _, _ in
+    receive(connection, buffer: Data())
+  }
+
+  /// Reads one HTTP request: the headers, then the body if there is one
+  /// (Content-Length), across as many TCP reads as it takes.
+  private func receive(_ connection: NWConnection, buffer: Data) {
+    connection.receive(minimumIncompleteLength: 1, maximumLength: 65_536) { [weak self] data, _, isComplete, error in
       guard let self else { return }
-      let request = data.flatMap { String(data: $0, encoding: .utf8) } ?? ""
-      // "GET /auth/callback?code=...&state=... HTTP/1.1"
-      let target = request.split(separator: " ").dropFirst().first.map(String.init) ?? ""
-      let components = URLComponents(string: "http://127.0.0.1\(target)")
-      let isCallback = components?.path == self.path
-      GenioLog.post("ChatGPT: local server got \(components?.path ?? "an unreadable request")\(isCallback ? " (the callback)" : "")")
-      let page = isCallback
-        ? "<h2>" + String(localized: "Done.") + "</h2><p>" + String(localized: "You can go back to Genio.") + "</p>"
-        : "<p>Genio: unknown page.</p>"
-      let body = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><body style='font-family:-apple-system;text-align:center;padding-top:30vh'>\(page)</body>"
-      let response = "HTTP/1.1 \(isCallback ? "200 OK" : "404 Not Found")\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(Data(body.utf8).count)\r\nConnection: close\r\n\r\n\(body)"
-      connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
-      guard isCallback, let items = components?.queryItems else { return }
-      var parameters: [String: String] = [:]
-      for item in items { parameters[item.name] = item.value ?? "" }
-      self.finish(.success(parameters))
+      var buffer = buffer
+      if let data { buffer.append(data) }
+      let finished = isComplete || error != nil || buffer.count > 262_144
+      guard let headerEnd = buffer.range(of: Data("\r\n\r\n".utf8)) else {
+        if finished { self.respond(connection, head: String(decoding: buffer, as: UTF8.self), body: Data()) }
+        else { self.receive(connection, buffer: buffer) }
+        return
+      }
+      let head = String(decoding: buffer[..<headerEnd.lowerBound], as: UTF8.self)
+      let body = Data(buffer[headerEnd.upperBound...])
+      let length = head.split(separator: "\r\n")
+        .first { $0.lowercased().hasPrefix("content-length:") }
+        .flatMap { Int($0.split(separator: ":")[1].trimmingCharacters(in: .whitespaces)) } ?? 0
+      if body.count < length && !finished {
+        self.receive(connection, buffer: buffer)
+      } else {
+        self.respond(connection, head: head, body: body)
+      }
+    }
+  }
+
+  /// Answers one request. The OAuth parameters may arrive in the query string
+  /// (GET), in a form body (POST, "form_post"), or after a "#" that browsers
+  /// never send to a server: for that last case the page sends them back.
+  private func respond(_ connection: NWConnection, head: String, body: Data) {
+    // "GET /auth/callback?code=...&state=... HTTP/1.1"
+    let requestLine = head.split(separator: "\r\n").first.map(String.init) ?? ""
+    let parts = requestLine.split(separator: " ").map(String.init)
+    let method = parts.first ?? "?"
+    let target = parts.count > 1 ? parts[1] : ""
+    let components = URLComponents(string: "http://127.0.0.1\(target)")
+    let isCallback = components?.path == path
+
+    var parameters: [String: String] = [:]
+    for item in components?.queryItems ?? [] { parameters[item.name] = item.value ?? "" }
+    if method == "POST", let form = String(data: body, encoding: .utf8) {
+      var formParts = URLComponents()
+      formParts.percentEncodedQuery = form.replacingOccurrences(of: "+", with: "%20")
+      for item in formParts.queryItems ?? [] { parameters[item.name] = item.value ?? "" }
+    }
+    let names = parameters.keys.sorted().joined(separator: ", ")
+    GenioLog.post("ChatGPT: local server got \(method) \(components?.path ?? "?")\(isCallback ? " (the callback)" : "") with \(names.isEmpty ? "no parameters" : names)")
+
+    let page: String
+    let status: String
+    if isCallback && !parameters.isEmpty {
+      status = "200 OK"
+      page = "<h2>" + String(localized: "Done.") + "</h2><p>" + String(localized: "You can go back to Genio.") + "</p>"
+    } else if isCallback {
+      // Nothing in the query or body: the parameters, if any, are in the
+      // fragment. Send them back as a query string.
+      status = "200 OK"
+      page = """
+        <p>…</p>
+        <script>
+        if (location.hash.length > 1) {
+          location.replace('\(path)?' + location.hash.substring(1));
+        } else {
+          document.body.innerHTML = '<p>Genio: OpenAI sent no sign-in data.</p>';
+        }
+        </script>
+        """
+    } else {
+      status = "404 Not Found"
+      page = "<p>Genio: unknown page.</p>"
+    }
+    let html = "<!doctype html><meta charset=utf-8><meta name=viewport content='width=device-width'><body style='font-family:-apple-system;text-align:center;padding-top:30vh'>\(page)</body>"
+    let response = "HTTP/1.1 \(status)\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: \(Data(html.utf8).count)\r\nConnection: close\r\n\r\n\(html)"
+    connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
+    if isCallback && !parameters.isEmpty {
+      finish(.success(parameters))
     }
   }
 }
