@@ -35,6 +35,7 @@ actor ChatGPTAuth {
     case invalidIDToken
     case listener(String)
     case server(String)
+    case timedOut
 
     var errorDescription: String? {
       switch self {
@@ -45,6 +46,7 @@ actor ChatGPTAuth {
       case .invalidIDToken: return String(localized: "Invalid identity token.")
       case .listener(let why): return String(localized: "Local sign-in server: \(why)")
       case .server(let why): return String(localized: "ChatGPT sign-in error: \(why)")
+      case .timedOut: return String(localized: "Sign-in took too long: nothing came back from OpenAI. See Settings → Diagnostics → Log.")
       }
     }
   }
@@ -88,9 +90,12 @@ actor ChatGPTAuth {
     let nonce = Self.randomURLSafe(16)
     let savedClientId = Keychain.string(Self.clientIdKey)
 
+    GenioLog.post("ChatGPT: sign-in started (\(savedClientId == nil ? "first registration" : "client already registered"))")
     let listener = try await LoopbackListener.start(ports: Self.ports, path: Self.callbackPath)
     defer { listener.stop() }
     let redirectURI = "http://127.0.0.1:\(listener.port)\(Self.callbackPath)"
+    GenioLog.post("ChatGPT: local server ready on 127.0.0.1:\(listener.port)")
+    await LoopbackListener.selfTest(port: listener.port)
 
     var items = [
       URLQueryItem(name: "client_id", value: savedClientId ?? "dynamic_agent_client"),
@@ -115,7 +120,9 @@ actor ChatGPTAuth {
       .replacingOccurrences(of: "+", with: "%2B")
       .replacingOccurrences(of: ":", with: "%3A")
 
+    GenioLog.post("ChatGPT: opening the OpenAI sign-in page")
     let callback = try await WebSignIn.run(url: components.url!, until: listener.callback)
+    GenioLog.post("ChatGPT: callback received with \(callback.keys.sorted().joined(separator: ", "))")
 
     if callback["error"] == "access_denied" { throw AuthError.denied }
     if let error = callback["error"] { throw AuthError.server(error) }
@@ -126,6 +133,7 @@ actor ChatGPTAuth {
     }
     Keychain.set(Data(clientId.utf8), for: Self.clientIdKey)
 
+    GenioLog.post("ChatGPT: exchanging the code for tokens")
     let tokens = try await Self.tokenRequest([
       "grant_type": "authorization_code",
       "client_id": clientId,
@@ -137,6 +145,7 @@ actor ChatGPTAuth {
     let email = try Self.checkIDToken(tokens["id_token"] as? String, clientId: clientId, nonce: nonce)
     let newAccount = try Self.account(from: tokens, clientId: clientId, email: email, previousRefresh: nil)
     save(newAccount)
+    GenioLog.post("ChatGPT: signed in\(email.map { " as \($0)" } ?? "")")
   }
 
   // MARK: - Tokens
@@ -231,8 +240,11 @@ actor ChatGPTAuth {
     request.httpBody = formBody(fields)
     let (data, response) = try await URLSession.shared.data(for: request)
     let json = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] ?? [:]
-    guard (response as? HTTPURLResponse)?.statusCode == 200 else {
+    let status = (response as? HTTPURLResponse)?.statusCode ?? 0
+    guard status == 200 else {
       let code = (json["error"] as? String) ?? ((json["error"] as? [String: Any])?["code"] as? String) ?? "http"
+      let detail = (json["error_description"] as? String) ?? ((json["error"] as? [String: Any])?["message"] as? String) ?? ""
+      GenioLog.post("ChatGPT: token endpoint \(status) \(code) \(detail)")
       throw AuthError.server(code)
     }
     return json
@@ -291,6 +303,12 @@ private final class WebSignIn: NSObject, ASWebAuthenticationPresentationContextP
         try await presenter.show(url)
         throw ChatGPTAuth.AuthError.cancelled
       }
+      // Never spin forever: give up if nothing comes back in 5 minutes.
+      group.addTask {
+        try await Task.sleep(for: .seconds(300))
+        GenioLog.post("ChatGPT: no callback after 5 minutes, giving up")
+        throw ChatGPTAuth.AuthError.timedOut
+      }
       defer {
         presenter.session?.cancel()
         group.cancelAll()
@@ -305,6 +323,7 @@ private final class WebSignIn: NSObject, ASWebAuthenticationPresentationContextP
   private func show(_ url: URL) async throws {
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
       let session = ASWebAuthenticationSession(url: url, callback: .customScheme("genio")) { _, error in
+        GenioLog.post("ChatGPT: sign-in sheet closed (\(error.map { String(describing: $0) } ?? "no error"))")
         continuation.resume(throwing: error ?? ChatGPTAuth.AuthError.cancelled)
       }
       session.presentationContextProvider = self
@@ -404,6 +423,20 @@ private final class LoopbackListener: @unchecked Sendable {
     listener.cancel()
   }
 
+  /// Connects to our own listener once, so the Log shows whether it answers
+  /// at all, before the browser is asked to reach it.
+  static func selfTest(port: UInt16) async {
+    guard let url = URL(string: "http://127.0.0.1:\(port)/selftest") else { return }
+    var request = URLRequest(url: url)
+    request.timeoutInterval = 3
+    do {
+      let (_, response) = try await URLSession.shared.data(for: request)
+      GenioLog.post("ChatGPT: local server self-test answered \((response as? HTTPURLResponse)?.statusCode ?? 0)")
+    } catch {
+      GenioLog.post("ChatGPT: local server self-test failed: \(error.localizedDescription)")
+    }
+  }
+
   private func finish(_ outcome: Result<[String: String], Error>) {
     queue.async {
       guard self.result == nil else { return }
@@ -422,6 +455,7 @@ private final class LoopbackListener: @unchecked Sendable {
       let target = request.split(separator: " ").dropFirst().first.map(String.init) ?? ""
       let components = URLComponents(string: "http://127.0.0.1\(target)")
       let isCallback = components?.path == self.path
+      GenioLog.post("ChatGPT: local server got \(components?.path ?? "an unreadable request")\(isCallback ? " (the callback)" : "")")
       let page = isCallback
         ? "<h2>" + String(localized: "Done.") + "</h2><p>" + String(localized: "You can go back to Genio.") + "</p>"
         : "<p>Genio: unknown page.</p>"

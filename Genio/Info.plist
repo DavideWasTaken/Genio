@@ -79,6 +79,11 @@
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
 	<string>Only needed if you pick the "Call" audio route for Genio's voice in the glasses.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UIApplicationSceneManifest</key>

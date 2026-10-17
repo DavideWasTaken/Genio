@@ -71,6 +71,10 @@ final class GenioController: ObservableObject {
     glasses.onTranscript = { [weak self] text, isFinal in self?.handleTranscript(text, isFinal: isFinal) }
     glasses.onLog = { [weak self] line in self?.note("Glasses: \(line)") }
     glasses.observeRegistration()
+    NotificationCenter.default.addObserver(forName: GenioLog.notification, object: nil, queue: .main) { [weak self] note in
+      guard let line = note.userInfo?["line"] as? String else { return }
+      MainActor.assumeIsolated { self?.note(line) }
+    }
   }
 
   private var defaults: UserDefaults { .standard }

@@ -171,6 +171,16 @@
         }
       }
     },
+    "Claude backup (optional)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Riserva con Claude (facoltativa)"
+          }
+        }
+      }
+    },
     "Claude with an API key: pay as you go, a few cents an hour.": {
       "localizations": {
         "it": {
@@ -351,12 +361,12 @@
         }
       }
     },
-    "Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5. With ChatGPT the key is optional and acts as a backup.": {
+    "Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Chiave da console.anthropic.com: resta nel portachiavi di questo iPhone. Il coach usa Claude Haiku 5.5. Con ChatGPT la chiave è facoltativa e fa da riserva."
+            "value": "Chiave da console.anthropic.com: resta nel portachiavi di questo iPhone. Il coach usa Claude Haiku 5.5."
           }
         }
       }
@@ -611,6 +621,16 @@
         }
       }
     },
+    "Sign-in took too long: nothing came back from OpenAI. See Settings → Diagnostics → Log.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "L'accesso ci ha messo troppo: da OpenAI non è tornato nulla. Guarda Impostazioni → Diagnostica → Registro."
+          }
+        }
+      }
+    },
     "Start GENIO": {
       "localizations": {
         "it": {
@@ -777,6 +797,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "In attesa degli occhiali"
+          }
+        }
+      }
+    },
+    "With a Claude key here, Claude answers when your ChatGPT plan hits its limit or the sign-in expires. Leave it empty to use ChatGPT only.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con una chiave Claude qui, risponde Claude quando il piano ChatGPT è al limite o l'accesso è scaduto. Lasciala vuota per usare solo ChatGPT."
           }
         }
       }

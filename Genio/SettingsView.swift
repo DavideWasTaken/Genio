@@ -41,21 +41,26 @@ struct SettingsView: View {
 
         if provider == "chatgpt" {
           chatgptSection
-        }
-
-        Section {
-          SecureField(text: $apiKey) { Text(verbatim: "sk-ant-…") }
-            .textInputAutocapitalization(.never)
-            .autocorrectionDisabled()
-          Picker("Questions and plans", selection: $smartModel) {
-            Text(verbatim: "Claude Opus 5.5").tag("claude-opus-5-5")
-            Text(verbatim: "Claude Sonnet 5.5").tag("claude-sonnet-5-5")
-            Text(verbatim: "Claude Haiku 5.5").tag("claude-haiku-5-5")
+          Section {
+            DisclosureGroup("Claude backup (optional)") {
+              claudeKeyField
+            }
+          } footer: {
+            Text("With a Claude key here, Claude answers when your ChatGPT plan hits its limit or the sign-in expires. Leave it empty to use ChatGPT only.")
           }
-        } header: {
-          Text(verbatim: "Claude")
-        } footer: {
-          Text("Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5. With ChatGPT the key is optional and acts as a backup.")
+        } else {
+          Section {
+            claudeKeyField
+            Picker("Questions and plans", selection: $smartModel) {
+              Text(verbatim: "Claude Opus 5.5").tag("claude-opus-5-5")
+              Text(verbatim: "Claude Sonnet 5.5").tag("claude-sonnet-5-5")
+              Text(verbatim: "Claude Haiku 5.5").tag("claude-haiku-5-5")
+            }
+          } header: {
+            Text(verbatim: "Claude")
+          } footer: {
+            Text("Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5.")
+          }
         }
 
         Section {
@@ -116,6 +121,12 @@ struct SettingsView: View {
       }
     }
     .tint(Color.genioViolet)
+  }
+
+  private var claudeKeyField: some View {
+    SecureField(text: $apiKey) { Text(verbatim: "sk-ant-…") }
+      .textInputAutocapitalization(.never)
+      .autocorrectionDisabled()
   }
 
   private var chatgptSection: some View {
