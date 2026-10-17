@@ -1,0 +1,4 @@
+// Copy to Config/Local.xcconfig and fill in. Your Team ID is in
+// Xcode > Settings > Accounts (or developer.apple.com > Membership).
+DEVELOPMENT_TEAM = ABCDE12345
+PRODUCT_BUNDLE_IDENTIFIER = com.yourname.genio

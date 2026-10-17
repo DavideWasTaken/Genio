@@ -1,0 +1,39 @@
+# XcodeGen spec: `xcodegen generate` creates Genio.xcodeproj.
+# Signing (Team ID, bundle id) comes from Config/Local.xcconfig: see the README.
+name: Genio
+options:
+  developmentLanguage: en
+  deploymentTarget:
+    iOS: "18.0"
+packages:
+  MWDAT:
+    url: https://github.com/facebook/meta-wearables-dat-ios
+    exactVersion: 1.0.1
+targets:
+  Genio:
+    type: application
+    platform: iOS
+    sources:
+      - Genio
+    configFiles:
+      Debug: Config/Genio.xcconfig
+      Release: Config/Genio.xcconfig
+    settings:
+      base:
+        INFOPLIST_FILE: Genio/Info.plist
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        SWIFT_EMIT_LOC_STRINGS: YES
+        LOCALIZATION_PREFERS_STRING_CATALOGS: YES
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1"
+        MARKETING_VERSION: "0.1.0"
+        CURRENT_PROJECT_VERSION: "1"
+    dependencies:
+      - package: MWDAT
+        product: MWDATCore
+      - package: MWDAT
+        product: MWDATCamera
+      - package: MWDAT
+        product: MWDATInputs
+      - package: MWDAT
+        product: MWDATSpeech

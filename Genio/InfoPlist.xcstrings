@@ -1,0 +1,36 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "NSBluetoothAlwaysUsageDescription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genio si collega ai tuoi occhiali Meta via Bluetooth."
+          }
+        }
+      }
+    },
+    "NSLocalNetworkUsageDescription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genio può raggiungere gli occhiali anche via Wi-Fi, che porta più video del Bluetooth."
+          }
+        }
+      }
+    },
+    "NSMicrophoneUsageDescription": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Serve solo se scegli l'audio \"Chiamata\" per la voce di Genio negli occhiali."
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

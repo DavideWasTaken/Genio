@@ -1,0 +1,876 @@
+{
+  "sourceLanguage": "en",
+  "strings": {
+    "%lld lines": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld righe"
+          }
+        }
+      }
+    },
+    "Access denied on ChatGPT.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accesso negato su ChatGPT."
+          }
+        }
+      }
+    },
+    "Account": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Account"
+          }
+        }
+      }
+    },
+    "App language": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lingua dell'app"
+          }
+        }
+      }
+    },
+    "Audio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Audio"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatico"
+          }
+        }
+      }
+    },
+    "Automatic (iPhone)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatica (iPhone)"
+          }
+        }
+      }
+    },
+    "Brain": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cervello"
+          }
+        }
+      }
+    },
+    "Button": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasto"
+          }
+        }
+      }
+    },
+    "Call (steadier)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiamata (più stabile)"
+          }
+        }
+      }
+    },
+    "Camera": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Camera"
+          }
+        }
+      }
+    },
+    "Camera permission denied in Meta AI.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permesso fotocamera negato in Meta AI."
+          }
+        }
+      }
+    },
+    "Camera permission unreadable: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permesso fotocamera non leggibile: %@"
+          }
+        }
+      }
+    },
+    "Camera: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotocamera: %@"
+          }
+        }
+      }
+    },
+    "ChatGPT (plan)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "ChatGPT (piano)"
+          }
+        }
+      }
+    },
+    "ChatGPT plan usage limit reached.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Limite d'uso del piano ChatGPT raggiunto."
+          }
+        }
+      }
+    },
+    "ChatGPT sign-in error: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Errore di accesso a ChatGPT: %@"
+          }
+        }
+      }
+    },
+    "Claude with an API key: pay as you go, a few cents an hour.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claude con la chiave API: paghi a consumo, pochi centesimi l'ora."
+          }
+        }
+      }
+    },
+    "Coach": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach"
+          }
+        }
+      }
+    },
+    "Coach and glasses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach e occhiali"
+          }
+        }
+      }
+    },
+    "Connect glasses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connetti occhiali"
+          }
+        }
+      }
+    },
+    "Connected": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connessi"
+          }
+        }
+      }
+    },
+    "Connecting…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connessione…"
+          }
+        }
+      }
+    },
+    "Copy": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Copia"
+          }
+        }
+      }
+    },
+    "Diagnostics": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Diagnostica"
+          }
+        }
+      }
+    },
+    "Disconnect": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Disconnetti"
+          }
+        }
+      }
+    },
+    "Done": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fatto"
+          }
+        }
+      }
+    },
+    "Done.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fatto."
+          }
+        }
+      }
+    },
+    "Double press": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Doppia pressione"
+          }
+        }
+      }
+    },
+    "GENIO is on. Tap to stop": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "GENIO attivo. Tocca per fermare"
+          }
+        }
+      }
+    },
+    "Glasses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Occhiali"
+          }
+        }
+      }
+    },
+    "Glasses not connected: unfold and wear them, and check that Meta AI shows them connected and Bluetooth is on.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Occhiali non collegati: aprili, indossali e controlla che Meta AI li veda connessi e che il Bluetooth sia acceso."
+          }
+        }
+      }
+    },
+    "Heard": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ho sentito"
+          }
+        }
+      }
+    },
+    "Invalid identity token.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Token di identità non valido."
+          }
+        }
+      }
+    },
+    "Invalid sign-in response (state).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Risposta di accesso non valida (state)."
+          }
+        }
+      }
+    },
+    "Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5. With ChatGPT the key is optional and acts as a backup.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave da console.anthropic.com: resta nel portachiavi di questo iPhone. Il coach usa Claude Haiku 5.5. Con ChatGPT la chiave è facoltativa e fa da riserva."
+          }
+        }
+      }
+    },
+    "Language": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lingua"
+          }
+        }
+      }
+    },
+    "Link with Meta AI": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega a Meta AI"
+          }
+        }
+      }
+    },
+    "Link with Meta AI first": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da collegare a Meta AI"
+          }
+        }
+      }
+    },
+    "Linking failed: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collegamento non riuscito: %@"
+          }
+        }
+      }
+    },
+    "Local sign-in server: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Server locale per l'accesso: %@"
+          }
+        }
+      }
+    },
+    "Log": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registro"
+          }
+        }
+      }
+    },
+    "Long press": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione lunga"
+          }
+        }
+      }
+    },
+    "Looks every %lld s": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Guarda ogni %lld s"
+          }
+        }
+      }
+    },
+    "Media (better quality)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Media (qualità migliore)"
+          }
+        }
+      }
+    },
+    "Meta AI reports no glasses: pair them in the Meta AI app and try again.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Meta AI non segnala occhiali: associali nell'app Meta AI e riprova."
+          }
+        }
+      }
+    },
+    "Meta glasses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Occhiali Meta"
+          }
+        }
+      }
+    },
+    "Models unavailable: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelli non disponibili: %@"
+          }
+        }
+      }
+    },
+    "Not connected": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Non connessi"
+          }
+        }
+      }
+    },
+    "Nothing yet: connect the glasses or start GENIO.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora niente: connetti gli occhiali o avvia GENIO."
+          }
+        }
+      }
+    },
+    "Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not. Pick a fast model for the coach.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con Plus c'è un limite d'uso ogni 5 ore, condiviso con le altre app che usano il tuo piano; con Pro no. Per il coach scegli un modello veloce."
+          }
+        }
+      }
+    },
+    "Press the button on your glasses or tap here. For a quick question say \"Genio, …\".": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Premi il tasto sugli occhiali o tocca qui. Per una domanda al volo dì \"Genio, …\"."
+          }
+        }
+      }
+    },
+    "Questions and plans": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Domande e piani"
+          }
+        }
+      }
+    },
+    "Say \"done\", \"repeat\", \"back\" or \"new task\". Start a question with \"Genio\".": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dì \"fatto\", \"ripeti\", \"indietro\" o \"nuovo compito\". Per una domanda inizia con \"Genio\"."
+          }
+        }
+      }
+    },
+    "Session not started: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione non avviata: %@"
+          }
+        }
+      }
+    },
+    "Settings": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Impostazioni"
+          }
+        }
+      }
+    },
+    "Short press": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pressione breve"
+          }
+        }
+      }
+    },
+    "Sign in with ChatGPT": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accedi con ChatGPT"
+          }
+        }
+      }
+    },
+    "Sign in with ChatGPT in Settings.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accedi con ChatGPT nelle impostazioni."
+          }
+        }
+      }
+    },
+    "Sign out of ChatGPT": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Esci da ChatGPT"
+          }
+        }
+      }
+    },
+    "Sign-in cancelled.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Accesso annullato."
+          }
+        }
+      }
+    },
+    "Start GENIO": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia GENIO"
+          }
+        }
+      }
+    },
+    "Start/stop button": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasto avvia/ferma"
+          }
+        }
+      }
+    },
+    "Step %lld of %lld": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Passo %lld di %lld"
+          }
+        }
+      }
+    },
+    "The Claude API key is missing (Settings).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manca la chiave API di Claude (Impostazioni)."
+          }
+        }
+      }
+    },
+    "The glasses camera is not available.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fotocamera degli occhiali non è disponibile."
+          }
+        }
+      }
+    },
+    "The glasses need an update: Meta AI → your glasses → updates.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gli occhiali vanno aggiornati: Meta AI → i tuoi occhiali → aggiornamenti."
+          }
+        }
+      }
+    },
+    "The glasses software needs an update.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Va aggiornato il software degli occhiali."
+          }
+        }
+      }
+    },
+    "The model declined the request.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il modello ha rifiutato la richiesta."
+          }
+        }
+      }
+    },
+    "The model's answer was not valid.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La risposta del modello non è valida."
+          }
+        }
+      }
+    },
+    "The more often the coach looks, the quicker it reacts and the more it uses. If Genio's voice comes out of the phone instead of the glasses, try the \"Call\" audio.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Più spesso il coach guarda, più è reattivo e più consuma. Se la voce di Genio esce dal telefono invece che dagli occhiali, prova l'audio \"Chiamata\"."
+          }
+        }
+      }
+    },
+    "The voice language is what Genio speaks, understands (\"done\", \"repeat\"…) and answers in. The app's screens follow the iPhone's language; to change them for Genio only, open App language.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La lingua della voce è quella in cui Genio parla, capisce i comandi (\"fatto\", \"ripeti\"…) e risponde. Le schermate seguono la lingua dell'iPhone; per cambiarla solo per Genio apri Lingua dell'app."
+          }
+        }
+      }
+    },
+    "Turn on voice commands": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Attiva comandi vocali"
+          }
+        }
+      }
+    },
+    "Update the glasses software": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiorna il software degli occhiali"
+          }
+        }
+      }
+    },
+    "Uses your ChatGPT Plus/Pro plan instead of API credit. If a Claude key is set too, Claude takes over when the plan hits its limit.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il tuo piano ChatGPT Plus/Pro invece del credito API. Se c'è anche la chiave Claude, Claude subentra quando il piano è al limite."
+          }
+        }
+      }
+    },
+    "Voice": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Voce"
+          }
+        }
+      }
+    },
+    "Voice language": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lingua della voce"
+          }
+        }
+      }
+    },
+    "Waiting for the glasses": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In attesa degli occhiali"
+          }
+        }
+      }
+    },
+    "You can go back to Genio.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Puoi tornare a Genio."
+          }
+        }
+      }
+    },
+    "Your ChatGPT plan does not allow use from this app.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tuo piano ChatGPT non consente l'uso da questa app."
+          }
+        }
+      }
+    },
+    "connected": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "collegati"
+          }
+        }
+      }
+    },
+    "not connected (%@)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "non collegati (%@)"
+          }
+        }
+      }
+    },
+    "not ready": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "non pronto"
+          }
+        }
+      }
+    },
+    "on": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "attivo"
+          }
+        }
+      }
+    },
+    "paused": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "in pausa"
+          }
+        }
+      }
+    },
+    "ready": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "pronto"
+          }
+        }
+      }
+    },
+    "worn": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "indossati"
+          }
+        }
+      }
+    }
+  },
+  "version": "1.0"
+}

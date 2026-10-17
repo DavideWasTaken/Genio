@@ -1,0 +1,6 @@
+// Defaults for anyone cloning the repo. Put your own values in
+// Config/Local.xcconfig (not committed): copy Local.xcconfig.example.
+PRODUCT_BUNDLE_IDENTIFIER = com.example.genio
+DEVELOPMENT_TEAM =
+
+#include? "Local.xcconfig"
