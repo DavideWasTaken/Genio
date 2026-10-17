@@ -9,6 +9,22 @@ struct ContentView: View {
     NavigationStack {
       ScrollView {
         VStack(spacing: 20) {
+          // Title and settings on one line, centred on each other.
+          HStack(alignment: .center) {
+            Text(verbatim: "Genio")
+              .font(.largeTitle.bold())
+            Spacer()
+            Button {
+              showSettings = true
+            } label: {
+              Image(systemName: "gearshape")
+                .font(.title3.weight(.semibold))
+                .frame(width: 44, height: 44)
+                .background(Color(.secondarySystemGroupedBackground), in: Circle())
+            }
+            .accessibilityLabel(Text("Settings"))
+          }
+
           GenioOrb(active: genio.active, thinking: genio.thinking) { genio.toggle() }
             .padding(.top, 4)
 
@@ -42,17 +58,7 @@ struct ContentView: View {
         .padding(20)
       }
       .background(Color(.systemGroupedBackground).ignoresSafeArea())
-      .navigationTitle(Text(verbatim: "Genio"))
-      .toolbar {
-        ToolbarItem(placement: .topBarTrailing) {
-          Button {
-            showSettings = true
-          } label: {
-            Image(systemName: "gearshape")
-          }
-          .accessibilityLabel(Text("Settings"))
-        }
-      }
+      .toolbar(.hidden, for: .navigationBar)
       .sheet(isPresented: $showSettings) {
         SettingsView(genio: genio, glasses: glasses)
       }

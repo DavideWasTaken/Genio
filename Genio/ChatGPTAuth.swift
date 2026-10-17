@@ -294,6 +294,10 @@ actor ChatGPTAuth {
 @MainActor
 private final class WebSignIn: NSObject, ASWebAuthenticationPresentationContextProviding {
   private var session: ASWebAuthenticationSession?
+  /// The wait in show(). Kept so close() can end it: iOS does not call the
+  /// session's completion handler when the app cancels the session itself,
+  /// and waiting for that call is what left the sign-in spinning.
+  private var waiting: CheckedContinuation<Void, Error>?
 
   static func run(url: URL, until callback: @escaping () async throws -> [String: String]) async throws -> [String: String] {
     let presenter = WebSignIn()
@@ -310,7 +314,7 @@ private final class WebSignIn: NSObject, ASWebAuthenticationPresentationContextP
         throw ChatGPTAuth.AuthError.timedOut
       }
       defer {
-        presenter.session?.cancel()
+        presenter.close()
         group.cancelAll()
       }
       guard let result = try await group.next() else { throw ChatGPTAuth.AuthError.cancelled }
@@ -322,9 +326,10 @@ private final class WebSignIn: NSObject, ASWebAuthenticationPresentationContextP
   /// scheme, so this only ends by the user closing it or by cancel().
   private func show(_ url: URL) async throws {
     try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-      let session = ASWebAuthenticationSession(url: url, callback: .customScheme("genio")) { _, error in
-        GenioLog.post("ChatGPT: sign-in sheet closed (\(error.map { String(describing: $0) } ?? "no error"))")
-        continuation.resume(throwing: error ?? ChatGPTAuth.AuthError.cancelled)
+      waiting = continuation
+      let session = ASWebAuthenticationSession(url: url, callback: .customScheme("genio")) { [weak self] _, error in
+        GenioLog.post("ChatGPT: sign-in sheet closed by the user (\(error.map { String(describing: $0) } ?? "no error"))")
+        Task { @MainActor in self?.endWait(throwing: error ?? ChatGPTAuth.AuthError.cancelled) }
       }
       session.presentationContextProvider = self
       // Keep Safari's cookies: if you are already logged in to ChatGPT there,
@@ -332,9 +337,24 @@ private final class WebSignIn: NSObject, ASWebAuthenticationPresentationContextP
       session.prefersEphemeralWebBrowserSession = false
       self.session = session
       if !session.start() {
-        continuation.resume(throwing: ChatGPTAuth.AuthError.cancelled)
+        endWait(throwing: ChatGPTAuth.AuthError.cancelled)
       }
     }
+  }
+
+  /// Dismisses the sheet (if still up) and ends the wait in show().
+  func close() {
+    session?.cancel()
+    session = nil
+    endWait(throwing: ChatGPTAuth.AuthError.cancelled)
+  }
+
+  /// Resumes show() exactly once, whoever gets here first: the user closing
+  /// the sheet, or close() after the callback arrived.
+  private func endWait(throwing error: Error) {
+    guard let continuation = waiting else { return }
+    waiting = nil
+    continuation.resume(throwing: error)
   }
 
   nonisolated func presentationAnchor(for session: ASWebAuthenticationSession) -> ASPresentationAnchor {

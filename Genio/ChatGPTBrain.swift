@@ -53,7 +53,7 @@ struct ChatGPTBrain: Brain {
   func plan(request: String, image: Data?) async throws -> Plan {
     var content: [[String: Any]] = []
     if let image { content.append(imagePart(image)) }
-    content.append(textPart(Prompts.plan(request: request)))
+    content.append(textPart(Prompts.plan(request: request, hasImage: image != nil)))
     let text = try await send(
       model: smartModel, instructions: Prompts.planInstructions, content: content,
       schema: ("plan", Prompts.planSchema))
@@ -65,6 +65,17 @@ struct ChatGPTBrain: Brain {
     if let image { content.append(imagePart(image)) }
     content.append(textPart(Prompts.answer(question: question, hasImage: image != nil, taskContext: taskContext)))
     return try await send(model: smartModel, instructions: Prompts.answerInstructions, content: content, schema: nil)
+  }
+
+  func followUp(message: String, image: Data?, goal: String, steps: [String], current: Int) async throws -> FollowUp {
+    var content: [[String: Any]] = []
+    if let image { content.append(imagePart(image)) }
+    content.append(textPart(Prompts.followUp(
+      message: message, hasImage: image != nil, goal: goal, steps: steps, current: current)))
+    let text = try await send(
+      model: smartModel, instructions: Prompts.followUpInstructions, content: content,
+      schema: ("follow_up", Prompts.followUpSchema))
+    return try Prompts.decode(FollowUp.self, from: text)
   }
 
   // MARK: - HTTP

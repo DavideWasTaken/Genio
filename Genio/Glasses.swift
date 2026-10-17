@@ -50,7 +50,15 @@ final class Glasses: ObservableObject {
   private var registrationTask: Task<Void, Never>?
   private var devicesTask: Task<Void, Never>?
   private var deviceTokens: [any AnyListenerToken] = []
-  private var speechRestarts = 0
+  /// When the recogniser was restarted lately: it stops after every
+  /// finished sentence, so it is always restarted, only slowed down if it
+  /// stops many times in a row in a short time.
+  private var speechRestarts: [Date] = []
+  /// Camera restarts after a stream error, capped so a camera that keeps
+  /// failing does not loop forever; reset once it has run for a minute.
+  private var cameraRestarts = 0
+  private var cameraRestarting = false
+  private var streamingSince: Date?
   /// True while the started session is asking for permissions, so a second
   /// `.started` cannot start a second round of requests.
   private var preparing = false
@@ -247,7 +255,10 @@ final class Glasses: ObservableObject {
     speech = nil
     buttonReady = false
     speechReady = false
-    speechRestarts = 0
+    speechRestarts = []
+    cameraRestarts = 0
+    cameraRestarting = false
+    streamingSince = nil
     latest.clear()
     status = newStatus
   }
@@ -296,8 +307,8 @@ final class Glasses: ObservableObject {
     }
   }
 
+  /// To the in-app Log (which also prints to the Xcode console).
   private func log(_ line: String) {
-    NSLog("[Glasses] %@", line)
     onLog?(line)
   }
 
@@ -321,20 +332,74 @@ final class Glasses: ObservableObject {
       }.store(in: tokens)
       newCamera.stream.statePublisher.listen { [weak self] state in
         Task { @MainActor in
-          guard let self else { return }
+          // Events from a camera already replaced by a restart are stale.
+          guard let self, self.camera === newCamera else { return }
           switch state {
-          case .streaming: self.status = .streaming
-          case .waitingForDevice, .starting: self.status = .waitingForGlasses
-          default: break
+          case .streaming:
+            self.status = .streaming
+            self.streamingSince = Date()
+          case .waitingForDevice, .starting:
+            self.status = .waitingForGlasses
+          case .stopped where self.streamingSince != nil:
+            // Only a stream that was running: not one still starting up.
+            self.restartCamera(on: session, reason: "stream stopped")
+          default:
+            break
           }
         }
       }.store(in: tokens)
       newCamera.stream.errorPublisher.listen { [weak self] error in
-        Task { @MainActor in self?.log("Camera error: \(error)") }
+        Task { @MainActor in
+          guard let self, self.camera === newCamera else { return }
+          self.log("Camera error: \(error)")
+          self.restartCamera(on: session, reason: "\(error)")
+        }
       }.store(in: tokens)
       newCamera.stream.start()
     } catch {
       status = .failed(String(localized: "Camera: \(error.localizedDescription)"))
+    }
+  }
+
+  /// Starts the recogniser again. The glasses stop it after each finished
+  /// sentence, so this runs all the time; only a burst of stops (more than
+  /// 10 in a minute) earns a pause, never a permanent give-up.
+  private func restartSpeech(_ recogniser: Speech) {
+    let now = Date()
+    speechRestarts = speechRestarts.filter { now.timeIntervalSince($0) < 60 } + [now]
+    let delay: Double = speechRestarts.count > 10 ? 10 : 0.3
+    if delay > 1 { log("Speech: stopping too often, pausing \(Int(delay)) s before listening again") }
+    Task { [weak self] in
+      try? await Task.sleep(for: .seconds(delay))
+      guard let self, self.speech === recogniser else { return }
+      recogniser.start()
+    }
+  }
+
+  /// Brings the camera stream back after an error (such as
+  /// videoStreamingError) or an unexpected stop, so the coach and the
+  /// planner keep seeing. Button and speech stay attached to the session.
+  private func restartCamera(on session: DeviceSession, reason: String) {
+    guard self.session === session, camera != nil, !cameraRestarting else { return }
+    if let since = streamingSince, Date().timeIntervalSince(since) > 60 {
+      cameraRestarts = 0
+    }
+    guard cameraRestarts < 5 else {
+      log("Camera: gave up after 5 restarts (\(reason)). Disconnect and connect the glasses again.")
+      return
+    }
+    cameraRestarts += 1
+    cameraRestarting = true
+    streamingSince = nil
+    log("Camera: restarting after \(reason) (\(cameraRestarts)/5)")
+    camera?.stop()
+    camera = nil
+    Task { [weak self] in
+      try? await Task.sleep(for: .seconds(2))
+      guard let self else { return }
+      self.cameraRestarting = false
+      guard self.session === session else { return }
+      self.attachCamera(to: session, thenSpeech: false)
     }
   }
 
@@ -400,14 +465,10 @@ final class Glasses: ObservableObject {
           case .started:
             self.speechReady = true
           case .stopped:
-            // Born stopped: only restart a recogniser that had been running,
-            // and only a few times, so a dead one cannot spin.
-            guard self.speechReady else { break }
+            // Born stopped: only restart a recogniser that had been running.
+            guard self.speechReady, self.speech === newSpeech else { break }
             self.speechReady = false
-            if self.speechRestarts < 3 {
-              self.speechRestarts += 1
-              newSpeech.start()
-            }
+            self.restartSpeech(newSpeech)
           default:
             break
           }

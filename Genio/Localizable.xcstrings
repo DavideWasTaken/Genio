@@ -11,6 +11,36 @@
         }
       }
     },
+    "API key missing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chiave API mancante"
+          }
+        }
+      }
+    },
+    "API key set": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "chiave API impostata"
+          }
+        }
+      }
+    },
+    "About": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Info"
+          }
+        }
+      }
+    },
     "Access denied on ChatGPT.": {
       "localizations": {
         "it": {
@@ -67,16 +97,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Automatica (iPhone)"
-          }
-        }
-      }
-    },
-    "Brain": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cervello"
           }
         }
       }
@@ -151,6 +171,16 @@
         }
       }
     },
+    "ChatGPT models": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modelli ChatGPT"
+          }
+        }
+      }
+    },
     "ChatGPT plan usage limit reached.": {
       "localizations": {
         "it": {
@@ -171,12 +201,12 @@
         }
       }
     },
-    "Claude backup (optional)": {
+    "Claude (API key)": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Riserva con Claude (facoltativa)"
+            "value": "Claude (chiave API)"
           }
         }
       }
@@ -301,6 +331,16 @@
         }
       }
     },
+    "From console.anthropic.com. It stays in this iPhone's keychain.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Da console.anthropic.com. Resta nel portachiavi di questo iPhone."
+          }
+        }
+      }
+    },
     "GENIO is on. Tap to stop": {
       "localizations": {
         "it": {
@@ -341,6 +381,16 @@
         }
       }
     },
+    "If the main one can't answer (credit or plan limit used up, sign-in expired, service down), Genio asks the other one, when it is set up below.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Se il principale non può rispondere (credito o limite del piano finiti, accesso scaduto, servizio non disponibile), Genio chiede all'altro, se è configurato qui sotto."
+          }
+        }
+      }
+    },
     "Invalid identity token.": {
       "localizations": {
         "it": {
@@ -357,16 +407,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Risposta di accesso non valida (state)."
-          }
-        }
-      }
-    },
-    "Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Chiave da console.anthropic.com: resta nel portachiavi di questo iPhone. Il coach usa Claude Haiku 5.5."
           }
         }
       }
@@ -451,6 +491,16 @@
         }
       }
     },
+    "Main": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Principale"
+          }
+        }
+      }
+    },
     "Media (better quality)": {
       "localizations": {
         "it": {
@@ -477,6 +527,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Occhiali Meta"
+          }
+        }
+      }
+    },
+    "Model and accounts": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Modello e account"
           }
         }
       }
@@ -511,12 +571,22 @@
         }
       }
     },
-    "Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not. Pick a fast model for the coach.": {
+    "Pick a fast model for the coach: it looks every few seconds.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Con Plus c'è un limite d'uso ogni 5 ore, condiviso con le altre app che usano il tuo piano; con Pro no. Per il coach scegli un modello veloce."
+            "value": "Per il coach scegli un modello veloce: guarda ogni pochi secondi."
+          }
+        }
+      }
+    },
+    "Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Con Plus c'è un limite d'uso ogni 5 ore, condiviso con le altre app che usano il tuo piano; con Pro no."
           }
         }
       }
@@ -627,6 +697,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "L'accesso ci ha messo troppo: da OpenAI non è tornato nulla. Guarda Impostazioni → Diagnostica → Registro."
+          }
+        }
+      }
+    },
+    "Source code on GitHub": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Codice sorgente su GitHub"
           }
         }
       }
@@ -761,12 +841,32 @@
         }
       }
     },
-    "Uses your ChatGPT Plus/Pro plan instead of API credit. If a Claude key is set too, Claude takes over when the plan hits its limit.": {
+    "Use the other as backup": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usa il tuo piano ChatGPT Plus/Pro invece del credito API. Se c'è anche la chiave Claude, Claude subentra quando il piano è al limite."
+            "value": "Usa l'altro come riserva"
+          }
+        }
+      }
+    },
+    "Uses your ChatGPT Plus/Pro plan instead of API credit.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa il tuo piano ChatGPT Plus/Pro invece del credito API."
+          }
+        }
+      }
+    },
+    "Version": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Versione"
           }
         }
       }
@@ -797,16 +897,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "In attesa degli occhiali"
-          }
-        }
-      }
-    },
-    "With a Claude key here, Claude answers when your ChatGPT plan hits its limit or the sign-in expires. Leave it empty to use ChatGPT only.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Con una chiave Claude qui, risponde Claude quando il piano ChatGPT è al limite o l'accesso è scaduto. Lasciala vuota per usare solo ChatGPT."
           }
         }
       }
@@ -861,6 +951,16 @@
         }
       }
     },
+    "not signed in": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "accesso non effettuato"
+          }
+        }
+      }
+    },
     "on": {
       "localizations": {
         "it": {
@@ -887,6 +987,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "pronto"
+          }
+        }
+      }
+    },
+    "signed in": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "accesso effettuato"
           }
         }
       }

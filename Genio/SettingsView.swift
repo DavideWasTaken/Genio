@@ -1,65 +1,41 @@
 import SwiftUI
 import UIKit
 
+/// General settings. The model and the accounts (Claude key, ChatGPT plan)
+/// live on their own page, behind the first row.
 struct SettingsView: View {
   @ObservedObject var genio: GenioController
   @ObservedObject var glasses: Glasses
   @Environment(\.dismiss) private var dismiss
-  @State private var apiKey = Keychain.apiKey ?? ""
-  @AppStorage(SettingKey.smartModel) private var smartModel = "claude-opus-5-5"
   @AppStorage(SettingKey.coachInterval) private var coachInterval = 6.0
   @AppStorage(SettingKey.pressType) private var pressType = "shortPress"
   @AppStorage(SettingKey.audioRoute) private var audioRoute = Voice.Route.media.rawValue
   @AppStorage(SettingKey.provider) private var provider = "claude"
-  @AppStorage(SettingKey.chatgptSmartModel) private var chatgptSmartModel = ""
-  @AppStorage(SettingKey.chatgptCoachModel) private var chatgptCoachModel = ""
   @AppStorage(VoiceLanguage.settingKey) private var voiceLanguage = VoiceLanguage.automatic
-  @State private var chatgptSignedIn = false
   @State private var chatgptEmail: String?
-  @State private var chatgptModels: [ChatGPTBrain.Model] = []
-  @State private var chatgptBusy = false
-  @State private var chatgptError: String?
+  @State private var chatgptSignedIn = false
 
   var body: some View {
     NavigationStack {
       Form {
         Section {
-          Picker("Brain", selection: $provider) {
-            Text(verbatim: "Claude").tag("claude")
-            Text("ChatGPT (plan)").tag("chatgpt")
-          }
-          .pickerStyle(.segmented)
-        } header: {
-          Text("Brain")
-        } footer: {
-          if provider == "chatgpt" {
-            Text("Uses your ChatGPT Plus/Pro plan instead of API credit. If a Claude key is set too, Claude takes over when the plan hits its limit.")
-          } else {
-            Text("Claude with an API key: pay as you go, a few cents an hour.")
-          }
-        }
-
-        if provider == "chatgpt" {
-          chatgptSection
-          Section {
-            DisclosureGroup("Claude backup (optional)") {
-              claudeKeyField
+          NavigationLink {
+            BrainSettingsView()
+          } label: {
+            HStack(spacing: 14) {
+              Image(systemName: "sparkles")
+                .font(.title3)
+                .foregroundStyle(Color.genioGold)
+                .frame(width: 34, height: 34)
+                .background(Color.genioNight, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
+              VStack(alignment: .leading, spacing: 2) {
+                Text("Model and accounts")
+                Text(verbatim: brainSummary)
+                  .font(.footnote)
+                  .foregroundStyle(brainReady ? Color.secondary : Color.orange)
+              }
             }
-          } footer: {
-            Text("With a Claude key here, Claude answers when your ChatGPT plan hits its limit or the sign-in expires. Leave it empty to use ChatGPT only.")
-          }
-        } else {
-          Section {
-            claudeKeyField
-            Picker("Questions and plans", selection: $smartModel) {
-              Text(verbatim: "Claude Opus 5.5").tag("claude-opus-5-5")
-              Text(verbatim: "Claude Sonnet 5.5").tag("claude-sonnet-5-5")
-              Text(verbatim: "Claude Haiku 5.5").tag("claude-haiku-5-5")
-            }
-          } header: {
-            Text(verbatim: "Claude")
-          } footer: {
-            Text("Key from console.anthropic.com; it stays in this iPhone's keychain. The coach uses Claude Haiku 5.5.")
+            .padding(.vertical, 2)
           }
         }
 
@@ -108,19 +84,147 @@ struct SettingsView: View {
               .font(.footnote)
           }
         }
+
+        Section {
+          LabeledContent("Version") {
+            Text(verbatim: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")
+          }
+          Link(destination: URL(string: "https://github.com/DavideWasTaken/Genio")!) {
+            Label("Source code on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+          }
+        } header: {
+          Text("About")
+        }
       }
       .navigationTitle("Settings")
-      .task { await refreshChatGPT() }
+      // Also runs when coming back from the model page, so the summary
+      // reflects a sign-in or a key entered there.
+      .onAppear { Task { await refreshSummary() } }
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
-          Button("Done") {
-            Keychain.apiKey = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
-            dismiss()
-          }
+          Button("Done") { dismiss() }
         }
       }
     }
     .tint(Color.genioViolet)
+  }
+
+  private var brainReady: Bool {
+    provider == "chatgpt" ? chatgptSignedIn : !(Keychain.apiKey ?? "").isEmpty
+  }
+
+  private var brainSummary: String {
+    if provider == "chatgpt" {
+      return chatgptSignedIn
+        ? "ChatGPT · " + (chatgptEmail ?? String(localized: "signed in"))
+        : "ChatGPT · " + String(localized: "not signed in")
+    }
+    return (Keychain.apiKey ?? "").isEmpty
+      ? "Claude · " + String(localized: "API key missing")
+      : "Claude · " + String(localized: "API key set")
+  }
+
+  private func refreshSummary() async {
+    chatgptSignedIn = await ChatGPTAuth.shared.isSignedIn
+    chatgptEmail = await ChatGPTAuth.shared.email
+  }
+}
+
+/// Which model answers, and the accounts behind it: the Claude API key, or
+/// the ChatGPT plan with Claude as an optional backup.
+struct BrainSettingsView: View {
+  @State private var apiKey = Keychain.apiKey ?? ""
+  @AppStorage(SettingKey.provider) private var provider = "claude"
+  @AppStorage(SettingKey.smartModel) private var smartModel = "claude-opus-5-5"
+  @AppStorage(SettingKey.chatgptSmartModel) private var chatgptSmartModel = ""
+  @AppStorage(SettingKey.chatgptCoachModel) private var chatgptCoachModel = ""
+  @AppStorage(SettingKey.useBackup) private var useBackup = true
+  @State private var chatgptSignedIn = false
+  @State private var chatgptEmail: String?
+  @State private var chatgptModels: [ChatGPTBrain.Model] = []
+  @State private var chatgptBusy = false
+  @State private var chatgptError: String?
+
+  var body: some View {
+    Form {
+      Section {
+        Picker("Main", selection: $provider) {
+          Text(verbatim: "Claude").tag("claude")
+          Text("ChatGPT (plan)").tag("chatgpt")
+        }
+        .pickerStyle(.segmented)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets())
+      } header: {
+        Text("Main")
+      } footer: {
+        if provider == "chatgpt" {
+          Text("Uses your ChatGPT Plus/Pro plan instead of API credit.")
+        } else {
+          Text("Claude with an API key: pay as you go, a few cents an hour.")
+        }
+      }
+
+      Section {
+        Toggle("Use the other as backup", isOn: $useBackup)
+      } footer: {
+        Text("If the main one can't answer (credit or plan limit used up, sign-in expired, service down), Genio asks the other one, when it is set up below.")
+      }
+
+      if provider == "chatgpt" {
+        chatgptSections
+        claudeSections
+      } else {
+        claudeSections
+        chatgptSections
+      }
+    }
+    .navigationTitle("Model and accounts")
+    .navigationBarTitleDisplayMode(.inline)
+    .task { await refreshChatGPT() }
+    .onChange(of: apiKey) { _, newValue in
+      Keychain.apiKey = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+  }
+
+  @ViewBuilder
+  private var claudeSections: some View {
+    Section {
+      claudeKeyField
+      Picker("Questions and plans", selection: $smartModel) {
+        Text(verbatim: "Claude Opus 5.5").tag("claude-opus-5-5")
+        Text(verbatim: "Claude Sonnet 5.5").tag("claude-sonnet-5-5")
+        Text(verbatim: "Claude Haiku 5.5").tag("claude-haiku-5-5")
+      }
+      LabeledContent("Coach") {
+        Text(verbatim: "Claude Haiku 5.5")
+      }
+    } header: {
+      Text("Claude (API key)")
+    } footer: {
+      Text("From console.anthropic.com. It stays in this iPhone's keychain.")
+    }
+  }
+
+  @ViewBuilder
+  private var chatgptSections: some View {
+    chatgptAccount
+    if chatgptSignedIn {
+      Section {
+        Picker("Coach", selection: $chatgptCoachModel) {
+          Text("Automatic").tag("")
+          ForEach(chatgptModels) { Text(verbatim: $0.name).tag($0.slug) }
+        }
+        Picker("Questions and plans", selection: $chatgptSmartModel) {
+          Text("Automatic").tag("")
+          ForEach(chatgptModels) { Text(verbatim: $0.name).tag($0.slug) }
+        }
+      } header: {
+        Text("ChatGPT models")
+      } footer: {
+        Text("Pick a fast model for the coach: it looks every few seconds.")
+      }
+    }
   }
 
   private var claudeKeyField: some View {
@@ -129,19 +233,11 @@ struct SettingsView: View {
       .autocorrectionDisabled()
   }
 
-  private var chatgptSection: some View {
+  private var chatgptAccount: some View {
     Section {
       if chatgptSignedIn {
         LabeledContent("Account") {
           Text(verbatim: chatgptEmail ?? "ChatGPT")
-        }
-        Picker("Coach", selection: $chatgptCoachModel) {
-          Text("Automatic").tag("")
-          ForEach(chatgptModels) { Text(verbatim: $0.name).tag($0.slug) }
-        }
-        Picker("Questions and plans", selection: $chatgptSmartModel) {
-          Text("Automatic").tag("")
-          ForEach(chatgptModels) { Text(verbatim: $0.name).tag($0.slug) }
         }
         Button("Sign out of ChatGPT", role: .destructive) {
           Task {
@@ -167,9 +263,9 @@ struct SettingsView: View {
           .foregroundStyle(Color.red)
       }
     } header: {
-      Text(verbatim: "ChatGPT")
+      Text("ChatGPT (plan)")
     } footer: {
-      Text("Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not. Pick a fast model for the coach.")
+      Text("Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not.")
     }
   }
 

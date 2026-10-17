@@ -6,7 +6,7 @@ import UIKit
 struct GenioTask: Equatable {
   let id = UUID()
   let goal: String
-  let steps: [String]
+  var steps: [String]
   var current = 0
   var recentRemarks: [String] = []
 
@@ -28,6 +28,8 @@ enum SettingKey {
   static let provider = "provider"
   static let chatgptSmartModel = "chatgptSmartModel"
   static let chatgptCoachModel = "chatgptCoachModel"
+  /// Use the other brain when the main one cannot answer (default on).
+  static let useBackup = "useBackup"
 }
 
 /// GENIO's behaviour (commands shown in English; see VoiceLanguage for the
@@ -57,7 +59,17 @@ final class GenioController: ObservableObject {
   private var coachLoop: Task<Void, Never>?
   private var awaitingGoal = false
   private var questionWindowUntil = Date.distantPast
-  private var ignoreSpeechUntil = Date.distantPast
+  /// What Genio said last, as normalized words, and when it stopped: the
+  /// glasses' mic can pick up Genio's own voice, and those echoes must not
+  /// be taken for the user.
+  private var lastSpokenWords: Set<String> = []
+  private var lastSpokenEnd = Date.distantPast
+  /// Whether the sentence being recognised began while Genio was talking
+  /// (or right after): the glasses' mic hears Genio, and the recogniser
+  /// garbles it ("Ok, preparo" -> "OK Meta"), so timing tells echoes apart
+  /// better than words do.
+  private var utteranceInProgress = false
+  private var utteranceOverlapsGenio = false
   private var lastRemarkAt = Date.distantPast
 
   /// Read on every use, so a change in Settings applies at once.
@@ -79,19 +91,23 @@ final class GenioController: ObservableObject {
 
   private var defaults: UserDefaults { .standard }
 
-  /// Claude with the API key, or ChatGPT on your plan. With ChatGPT and a
-  /// Claude key both set, Claude covers for ChatGPT when the plan's usage
-  /// limit is reached or the sign-in has expired.
+  /// The main brain (Claude with the API key, or ChatGPT on your plan) and,
+  /// unless turned off, the other one as backup.
   private var brain: any Brain {
     let claude = ClaudeBrain(
       apiKey: Keychain.apiKey ?? "",
       smartModel: defaults.string(forKey: SettingKey.smartModel) ?? "claude-opus-5-5")
-    guard defaults.string(forKey: SettingKey.provider) == "chatgpt" else { return claude }
     let chatgpt = ChatGPTBrain(
       coachModel: defaults.string(forKey: SettingKey.chatgptCoachModel) ?? "",
       smartModel: defaults.string(forKey: SettingKey.chatgptSmartModel) ?? "")
-    if (Keychain.apiKey ?? "").isEmpty { return chatgpt }
-    return FallbackBrain(primary: chatgpt, backup: claude)
+    let chatgptIsMain = defaults.string(forKey: SettingKey.provider) == "chatgpt"
+    let useBackup = defaults.object(forKey: SettingKey.useBackup) as? Bool ?? true
+    if chatgptIsMain {
+      if useBackup { return FallbackBrain(primary: chatgpt, backup: claude) }
+      return chatgpt
+    }
+    if useBackup { return FallbackBrain(primary: claude, backup: chatgpt) }
+    return claude
   }
 
   private var coachInterval: TimeInterval {
@@ -153,14 +169,60 @@ final class GenioController: ObservableObject {
 
   private func handleTranscript(_ text: String, isFinal: Bool) {
     heard = text
+    if !utteranceInProgress {
+      utteranceInProgress = true
+      utteranceOverlapsGenio = voice.isSpeaking || Date().timeIntervalSince(lastSpokenEnd) < 0.8
+    }
     guard isFinal else { return }
-    // The glasses' mic can hear Genio's own voice: ignore what arrives while
-    // it speaks and just after.
-    guard !voice.isSpeaking, Date() > ignoreSpeechUntil else { return }
+    let overlapped = utteranceOverlapsGenio
+    utteranceInProgress = false
     let words = Self.normalize(text)
     guard !words.isEmpty else { return }
-    note("Heard: \(text)")
 
+    if overlapped {
+      // Begun over Genio's voice: almost always its echo. Only a command
+      // gets through (to interrupt it), and only the command part.
+      guard let command = commandPart(of: words) else {
+        note("Heard while Genio spoke, ignored: \(text)")
+        return
+      }
+      note("Heard over Genio's voice, kept the command: \(command)")
+      if voice.isSpeaking { voice.stop() }
+      act(on: command, words: command)
+      return
+    }
+    if isEcho(words) {
+      note("Heard (Genio's own voice, ignored): \(text)")
+      return
+    }
+    note("Heard: \(text)")
+    // The user talks over Genio: stop reading and listen.
+    if voice.isSpeaking { voice.stop() }
+    act(on: text, words: words)
+  }
+
+  /// The command inside a sentence that mixes Genio's echo with the user's
+  /// words: the wake word and what follows it, or a step command at the end
+  /// ("... della finestra fatto" -> "fatto").
+  private func commandPart(of words: String) -> String? {
+    let tokens = words.split(separator: " ").map(String.init)
+    // Genio says its own name ("Genio attivo…"): in an echo of that line the
+    // name is not the user calling it.
+    if let index = tokens.firstIndex(where: language.wakeWords.contains),
+       !lastSpokenWords.contains(tokens[index]) {
+      return tokens[index...].joined(separator: " ")
+    }
+    let commands = language.nextWords.union(language.repeatWords)
+      .union(language.backWords).union(language.newTaskWords)
+    for length in stride(from: min(4, tokens.count), through: 1, by: -1) {
+      let tail = tokens.suffix(length).joined(separator: " ")
+      if commands.contains(tail) { return tail }
+    }
+    return nil
+  }
+
+  /// Acts on a sentence that is for Genio.
+  private func act(on text: String, words: String) {
     // "Genio ..." anywhere in the sentence (as a word, not inside one):
     // what follows is for us.
     let tokens = words.split(separator: " ").map(String.init)
@@ -182,6 +244,10 @@ final class GenioController: ObservableObject {
         planTask(original)
         return
       }
+      if active, task?.currentStep != nil {
+        followUp(original)
+        return
+      }
       ask(original)
       return
     }
@@ -192,13 +258,18 @@ final class GenioController: ObservableObject {
         planTask(text)
         return
       }
+      // While guiding, whatever the user says is for Genio: "I can't find
+      // it", "there's no such button", "I'm on a Mac". The model answers
+      // with what it sees and may rewrite the remaining steps.
+      if task?.currentStep != nil {
+        followUp(text)
+        return
+      }
     }
     if Date() < questionWindowUntil {
       questionWindowUntil = .distantPast
       ask(text)
     }
-    // Anything else said during GENIO mode (talking to someone, thinking
-    // aloud) is ignored on purpose: questions start with "Genio".
   }
 
   /// Step commands during GENIO mode. Exact phrases only, so that
@@ -278,6 +349,39 @@ final class GenioController: ObservableObject {
     }
   }
 
+  /// A reply while guiding: spoken, and, when the plan did not fit, the
+  /// remaining steps replaced by the corrected ones.
+  private func followUp(_ message: String) {
+    guard !thinking, let snapshot = task, !snapshot.finished else { return }
+    thinking = true
+    let image = glasses.latestJPEG()
+    let brain = self.brain
+    Task {
+      defer { thinking = false }
+      do {
+        let reply = try await brain.followUp(
+          message: message, image: image, goal: snapshot.goal,
+          steps: snapshot.steps, current: snapshot.current)
+        let corrected = reply.remainingSteps.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        if !corrected.isEmpty, var now = task, now.id == snapshot.id, now.current == snapshot.current {
+          now.steps = Array(now.steps.prefix(now.current)) + corrected.prefix(max(1, 12 - now.current))
+          now.recentRemarks = []
+          task = now
+          note("Plan updated: \(corrected.count) steps from step \(now.current + 1)")
+          startCoach()
+        }
+        let line = reply.say.trimmingCharacters(in: .whitespacesAndNewlines)
+        if line.isEmpty {
+          note("Not for Genio, ignored")
+        } else {
+          say(line)
+        }
+      } catch {
+        say(Self.spokenLine(for: error))
+      }
+    }
+  }
+
   private func advance() {
     guard var current = task, !current.finished else { return }
     current.current += 1
@@ -342,14 +446,41 @@ final class GenioController: ObservableObject {
 
   private func say(_ text: String) {
     note("Genio: \(text)")
+    lastSpokenWords = Set(Self.normalize(text).split(separator: " ").map { Self.canonical(String($0)) })
     let languageCode = language.voiceCode
     Task {
       await voice.speak(text, languageCode: languageCode)
-      ignoreSpeechUntil = Date().addingTimeInterval(0.8)
+      lastSpokenEnd = Date()
     }
   }
 
+  /// True when what was heard is Genio's own last line coming back through
+  /// the glasses' mic: heard while (or just after) it spoke, and made of its
+  /// words. A short command like "done" is never treated as an echo.
+  private func isEcho(_ words: String) -> Bool {
+    guard voice.isSpeaking || Date().timeIntervalSince(lastSpokenEnd) < 3 else { return false }
+    let heard = words.split(separator: " ").map { Self.canonical(String($0)) }
+    guard heard.count >= 3 else { return false }
+    let shared = heard.filter(lastSpokenWords.contains).count
+    return Double(shared) / Double(heard.count) >= 0.6
+  }
+
+  /// One spelling per number, so "4 passi. Primo" said by Genio matches
+  /// "quattro passi uno" heard back through the mic.
+  private static let numberWords: [String: String] = [
+    "un": "1", "uno": "1", "una": "1", "primo": "1", "prima": "1", "one": "1", "first": "1",
+    "due": "2", "two": "2", "tre": "3", "three": "3", "quattro": "4", "four": "4",
+    "cinque": "5", "five": "5", "sei": "6", "six": "6", "sette": "7", "seven": "7",
+    "otto": "8", "eight": "8", "nove": "9", "nine": "9", "dieci": "10", "ten": "10",
+    "undici": "11", "eleven": "11", "dodici": "12", "twelve": "12",
+  ]
+
+  private static func canonical(_ word: String) -> String {
+    numberWords[word] ?? word
+  }
+
   private func note(_ line: String) {
+    NSLog("[Genio] %@", line)
     log.append(line)
     if log.count > 60 { log.removeFirst(log.count - 60) }
   }

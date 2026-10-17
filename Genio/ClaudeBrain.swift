@@ -24,7 +24,7 @@ struct ClaudeBrain: Brain {
   func plan(request: String, image: Data?) async throws -> Plan {
     var content: [[String: Any]] = []
     if let image { content.append(imageBlock(image)) }
-    content.append(textBlock(Prompts.plan(request: request)))
+    content.append(textBlock(Prompts.plan(request: request, hasImage: image != nil)))
     let text = try await send(
       model: smartModel, system: Prompts.planInstructions, content: content,
       maxTokens: 4096, schema: Prompts.planSchema)
@@ -38,6 +38,17 @@ struct ClaudeBrain: Brain {
     return try await send(
       model: smartModel, system: Prompts.answerInstructions, content: content,
       maxTokens: 2048, schema: nil)
+  }
+
+  func followUp(message: String, image: Data?, goal: String, steps: [String], current: Int) async throws -> FollowUp {
+    var content: [[String: Any]] = []
+    if let image { content.append(imageBlock(image)) }
+    content.append(textBlock(Prompts.followUp(
+      message: message, hasImage: image != nil, goal: goal, steps: steps, current: current)))
+    let text = try await send(
+      model: smartModel, system: Prompts.followUpInstructions, content: content,
+      maxTokens: 4096, schema: Prompts.followUpSchema)
+    return try Prompts.decode(FollowUp.self, from: text)
   }
 
   // MARK: - HTTP

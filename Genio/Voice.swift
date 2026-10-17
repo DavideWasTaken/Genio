@@ -35,8 +35,10 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
   private let toneFormat = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
   private var waiting: [ObjectIdentifier: CheckedContinuation<Void, Never>] = [:]
 
-  /// True while a line is being spoken or queued.
-  private(set) var isSpeaking = false
+  /// True while the synthesizer is actually talking. Read from the
+  /// synthesizer itself, so a missed delegate callback cannot leave Genio
+  /// stuck "speaking" (and deaf) forever.
+  var isSpeaking: Bool { synthesizer.isSpeaking }
 
   override init() {
     super.init()
@@ -65,9 +67,16 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
     let utterance = AVSpeechUtterance(string: line)
     utterance.voice = AVSpeechSynthesisVoice(language: languageCode)
     utterance.rate = AVSpeechUtteranceDefaultSpeechRate * 1.05
-    isSpeaking = true
+    let id = ObjectIdentifier(utterance)
+    // Safety net: if iOS never reports the end of this line, stop waiting
+    // after a generous estimate of its length.
+    let limit = Double(line.count) * 0.12 + 6
+    Task { [weak self] in
+      try? await Task.sleep(for: .seconds(limit))
+      self?.finished(id)
+    }
     await withCheckedContinuation { continuation in
-      waiting[ObjectIdentifier(utterance)] = continuation
+      waiting[id] = continuation
       synthesizer.speak(utterance)
     }
   }
@@ -94,7 +103,6 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
 
   private func finished(_ id: ObjectIdentifier) {
     waiting.removeValue(forKey: id)?.resume()
-    isSpeaking = !waiting.isEmpty
   }
 
   nonisolated func speechSynthesizer(_ synthesizer: AVSpeechSynthesizer, didFinish utterance: AVSpeechUtterance) {
