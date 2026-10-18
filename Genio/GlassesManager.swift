@@ -41,10 +41,11 @@ final class GlassesManager: ObservableObject {
 
   /// A press of the capture button.
   var onPress: ((CapturePressType) -> Void)?
-  /// The glasses took a photo during the camera stream: while the camera
-  /// streams, they keep the capture button for their own photo action and
-  /// do not pass the press on, so this photo is the only trace of it.
-  var onGlassesPhoto: (() -> Void)?
+  /// The capture button was pressed while the camera streamed. The glasses
+  /// keep the button for their own photo action then and do not pass the
+  /// press on; what the app sees is the stream pausing (or, if the SDK
+  /// delivers it, the photo).
+  var onCapturePressDuringStream: (() -> Void)?
   /// Diagnostic lines for the in-app log (errors, permission answers).
   var onLog: ((String) -> Void)?
 
@@ -339,6 +340,10 @@ final class GlassesManager: ObservableObject {
             // A camera starting again on a working session (GENIO switched
             // on) does not make the glasses less connected.
             if self.status != .connected { self.status = .waitingForGlasses }
+          case .paused:
+            // The glasses took the camera for their own photo or video:
+            // the capture button was pressed.
+            self.onCapturePressDuringStream?()
           case .stopped where self.streamingSince != nil:
             // Only a stream that was running: not one still starting up.
             self.restartCamera(on: session, reason: "stream stopped")
@@ -351,7 +356,7 @@ final class GlassesManager: ObservableObject {
         Task { @MainActor in
           guard let self, self.camera === newCamera else { return }
           self.log("Camera: the glasses took a photo (capture button)")
-          self.onGlassesPhoto?()
+          self.onCapturePressDuringStream?()
         }
       }.store(in: tokens)
       newCamera.stream.errorPublisher.listen { [weak self] error in
@@ -428,7 +433,7 @@ final class GlassesManager: ObservableObject {
     streamingSince = nil
     cameraActive = false
     latest.clear()
-    log("Camera: paused (\(reason))")
+    log("Camera: off (\(reason))")
   }
 
   /// The most recent frame and its age, for the camera test in Settings.
