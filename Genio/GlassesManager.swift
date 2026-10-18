@@ -2,18 +2,19 @@ import Foundation
 import MWDATCamera
 import MWDATCore
 import MWDATInputs
-import MWDATSpeech
 import UIKit
 
 /// Everything that talks to the glasses through Meta's DAT SDK (1.0):
 /// registration with Meta AI, the device session, the camera stream (only the
-/// latest frame is kept, for Claude to look at), the capture button (Inputs)
-/// and on-glasses speech recognition (Speech).
+/// latest frame is kept, for Gemini to look at) and the capture button
+/// (Inputs). Listening is not done here: Gemini Live hears the user through
+/// the glasses' Bluetooth microphone (AudioManager), so the glasses' own
+/// speech recognition (DAT Speech) is not used and nothing is heard twice.
 ///
-/// Inputs and Speech are experimental in DAT 1.0: they work for development
-/// and beta builds, not for App Store release yet.
+/// Inputs is experimental in DAT 1.0: it works for development and beta
+/// builds, not for App Store release yet.
 @MainActor
-final class Glasses: ObservableObject {
+final class GlassesManager: ObservableObject {
   enum Status: Equatable {
     case disconnected
     case connecting
@@ -26,8 +27,6 @@ final class Glasses: ObservableObject {
   @Published private(set) var status: Status = .disconnected
   /// The capture button is wired up (Inputs attached).
   @Published private(set) var buttonReady = false
-  /// The glasses are transcribing what you say (Speech started).
-  @Published private(set) var speechReady = false
   /// One line per pair Meta AI knows: name, link, compatibility, worn, battery.
   @Published private(set) var deviceLines: [String] = []
   /// The glasses refused the session because their DAT app is too old for
@@ -36,24 +35,17 @@ final class Glasses: ObservableObject {
 
   /// A press of the capture button.
   var onPress: ((CapturePressType) -> Void)?
-  /// Recognised speech: text, and whether the recogniser considers it final.
-  var onTranscript: ((String, Bool) -> Void)?
   /// Diagnostic lines for the in-app log (errors, permission answers).
   var onLog: ((String) -> Void)?
 
   private var session: DeviceSession?
   private var camera: Camera?
   private var inputs: Inputs?
-  private var speech: Speech?
   private var tokens = ListenerTokenBag()
   private var sessionTasks: [Task<Void, Never>] = []
   private var registrationTask: Task<Void, Never>?
   private var devicesTask: Task<Void, Never>?
   private var deviceTokens: [any AnyListenerToken] = []
-  /// When the recogniser was restarted lately: it stops after every
-  /// finished sentence, so it is always restarted, only slowed down if it
-  /// stops many times in a row in a short time.
-  private var speechRestarts: [Date] = []
   /// Camera restarts after a stream error, capped so a camera that keeps
   /// failing does not loop forever; reset once it has run for a minute.
   private var cameraRestarts = 0
@@ -138,16 +130,6 @@ final class Glasses: ObservableObject {
   }
 
   // MARK: - Session
-
-  /// Asks again for the microphone (through Meta AI) and, if granted,
-  /// starts on-glasses speech on the running session. For when the first
-  /// request timed out or was dismissed.
-  func enableVoice() async {
-    guard let session, camera != nil, speech == nil else { return }
-    guard await access(.microphone) == .granted else { return }
-    guard self.session === session else { return }
-    attachSpeech(to: session)
-  }
 
   /// Opens Meta AI on the page that updates the DAT app on the glasses.
   func openGlassesAppUpdate() async {
@@ -252,10 +234,7 @@ final class Glasses: ObservableObject {
     session = nil
     camera = nil
     inputs = nil
-    speech = nil
     buttonReady = false
-    speechReady = false
-    speechRestarts = []
     cameraRestarts = 0
     cameraRestarting = false
     streamingSince = nil
@@ -263,8 +242,8 @@ final class Glasses: ObservableObject {
     status = newStatus
   }
 
-  /// Camera first (required), then microphone (only voice commands need it),
-  /// then the camera stream. Button and speech follow the first frame.
+  /// Camera permission first (required), then the camera stream. The button
+  /// follows the first frame.
   private func prepare(_ session: DeviceSession) async {
     guard camera == nil, !preparing else { return }
     preparing = true
@@ -280,12 +259,8 @@ final class Glasses: ObservableObject {
       status = .failed(String(localized: "Camera permission unreadable: \(why)"))
       return
     }
-    let microphone = await access(.microphone)
-    if microphone != .granted {
-      log("Microphone not granted (\(microphone)): voice commands off, the button works.")
-    }
     guard self.session === session else { return }  // disconnected meanwhile
-    attachCamera(to: session, thenSpeech: microphone == .granted)
+    attachCamera(to: session)
   }
 
   /// Checks a grant, and asks for it through Meta AI if it is missing. A
@@ -314,9 +289,10 @@ final class Glasses: ObservableObject {
 
   // MARK: - Camera
 
-  private func attachCamera(to session: DeviceSession, thenSpeech hearsYou: Bool) {
+  private func attachCamera(to session: DeviceSession) {
     guard camera == nil else { return }
-    // Medium (504x896) at 7 fps: plenty for Claude, gentle on Bluetooth.
+    // Medium (504x896) at 7 fps: plenty for Gemini (which gets at most one
+    // frame a second), gentle on Bluetooth.
     let config = StreamConfiguration(videoCodec: .raw, resolution: .medium, frameRate: 7)
     do {
       guard let newCamera = try session.addCamera(config: config) else {
@@ -327,7 +303,7 @@ final class Glasses: ObservableObject {
       let latest = self.latest
       newCamera.stream.videoFramePublisher.listen { [weak self] frame in
         if latest.set(frame) {
-          Task { @MainActor in self?.attachControls(to: session, speech: hearsYou) }
+          Task { @MainActor in self?.attachButton(to: session) }
         }
       }.store(in: tokens)
       newCamera.stream.statePublisher.listen { [weak self] state in
@@ -361,24 +337,9 @@ final class Glasses: ObservableObject {
     }
   }
 
-  /// Starts the recogniser again. The glasses stop it after each finished
-  /// sentence, so this runs all the time; only a burst of stops (more than
-  /// 10 in a minute) earns a pause, never a permanent give-up.
-  private func restartSpeech(_ recogniser: Speech) {
-    let now = Date()
-    speechRestarts = speechRestarts.filter { now.timeIntervalSince($0) < 60 } + [now]
-    let delay: Double = speechRestarts.count > 10 ? 10 : 0.3
-    if delay > 1 { log("Speech: stopping too often, pausing \(Int(delay)) s before listening again") }
-    Task { [weak self] in
-      try? await Task.sleep(for: .seconds(delay))
-      guard let self, self.speech === recogniser else { return }
-      recogniser.start()
-    }
-  }
-
   /// Brings the camera stream back after an error (such as
-  /// videoStreamingError) or an unexpected stop, so the coach and the
-  /// planner keep seeing. Button and speech stay attached to the session.
+  /// videoStreamingError) or an unexpected stop, so Gemini and the coach
+  /// keep seeing. The button stays attached to the session.
   private func restartCamera(on session: DeviceSession, reason: String) {
     guard self.session === session, camera != nil, !cameraRestarting else { return }
     if let since = streamingSince, Date().timeIntervalSince(since) > 60 {
@@ -399,25 +360,46 @@ final class Glasses: ObservableObject {
       guard let self else { return }
       self.cameraRestarting = false
       guard self.session === session else { return }
-      self.attachCamera(to: session, thenSpeech: false)
+      self.attachCamera(to: session)
     }
   }
 
-  /// JPEG of the most recent frame, or nil if there is none newer than `maxAge`
-  /// (the glasses were taken off or folded).
-  func latestJPEG(maxAge: TimeInterval = 5) -> Data? {
-    guard let snapshot = latest.get(), Date().timeIntervalSince(snapshot.arrivedAt) <= maxAge,
-          let image = snapshot.frame.makeUIImage()
-    else { return nil }
-    return image.jpegData(compressionQuality: 0.7)
+  /// The most recent frame and its age, for the camera test in Settings.
+  func latestImage() -> (UIImage, TimeInterval)? {
+    guard let snapshot = latest.get(), let image = snapshot.frame.makeUIImage() else { return nil }
+    return (image, Date().timeIntervalSince(snapshot.arrivedAt))
   }
 
-  // MARK: - Button and speech
+  /// When the newest frame arrived (nil if none), without touching it.
+  var latestFrameTime: Date? { latest.get()?.arrivedAt }
 
-  private func attachControls(to session: DeviceSession, speech hearsYou: Bool) {
-    attachButton(to: session)
-    if hearsYou { attachSpeech(to: session) }
+  /// The newest frame as a JPEG, encoded off the main thread: (JPEG, when
+  /// the frame arrived). `maxDimension` scales it down first (Gemini Live
+  /// gains nothing from more pixels than its low media resolution uses).
+  func latestJPEGInBackground(maxAge: TimeInterval = 5, maxDimension: CGFloat? = nil, quality: CGFloat = 0.6) async -> (Data, Date)? {
+    guard let snapshot = latest.get(), Date().timeIntervalSince(snapshot.arrivedAt) <= maxAge else { return nil }
+    let box = FrameBox(frame: snapshot.frame)
+    let arrivedAt = snapshot.arrivedAt
+    return await Task.detached(priority: .userInitiated) {
+      guard let image = box.frame.makeUIImage() else { return nil }
+      let scaled = maxDimension.map { Self.scaled(image, maxDimension: $0) } ?? image
+      return scaled.jpegData(compressionQuality: quality).map { ($0, arrivedAt) }
+    }.value
   }
+
+  nonisolated private static func scaled(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
+    let longest = max(image.size.width, image.size.height)
+    guard longest > maxDimension, longest > 0 else { return image }
+    let factor = maxDimension / longest
+    let size = CGSize(width: (image.size.width * factor).rounded(), height: (image.size.height * factor).rounded())
+    let format = UIGraphicsImageRendererFormat.default()
+    format.scale = 1
+    return UIGraphicsImageRenderer(size: size, format: format).image { _ in
+      image.draw(in: CGRect(origin: .zero, size: size))
+    }
+  }
+
+  // MARK: - Button
 
   private func attachButton(to session: DeviceSession) {
     guard inputs == nil else { return }
@@ -444,44 +426,12 @@ final class Glasses: ObservableObject {
       log("Button not attached: \(error)")
     }
   }
+}
 
-  private func attachSpeech(to session: DeviceSession) {
-    guard speech == nil else { return }
-    do {
-      guard let newSpeech = try session.addSpeech() else {
-        log("These glasses expose no speech recognition (Speech).")
-        return
-      }
-      speech = newSpeech
-      newSpeech.transcriptionPublisher.listen { [weak self] result in
-        let text = result.text
-        let isFinal = result.isFinal
-        Task { @MainActor in self?.onTranscript?(text, isFinal) }
-      }.store(in: tokens)
-      newSpeech.statePublisher.listen { [weak self] state in
-        Task { @MainActor in
-          guard let self else { return }
-          switch state {
-          case .started:
-            self.speechReady = true
-          case .stopped:
-            // Born stopped: only restart a recogniser that had been running.
-            guard self.speechReady, self.speech === newSpeech else { break }
-            self.speechReady = false
-            self.restartSpeech(newSpeech)
-          default:
-            break
-          }
-        }
-      }.store(in: tokens)
-      newSpeech.errorPublisher.listen { [weak self] error in
-        Task { @MainActor in self?.log("Speech error: \(error)") }
-      }.store(in: tokens)
-      newSpeech.start()
-    } catch {
-      log("Speech not attached: \(error)")
-    }
-  }
+/// Hands a frame to a background task for encoding (the SDK's frames are
+/// immutable once delivered).
+private struct FrameBox: @unchecked Sendable {
+  let frame: VideoFrame
 }
 
 /// The newest camera frame and when it arrived. Written from the SDK's

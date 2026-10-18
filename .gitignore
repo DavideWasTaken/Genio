@@ -4,6 +4,8 @@
 Config/Local.xcconfig
 # Build output
 build/
+.build/
+.swiftpm/
 DerivedData/
 *.log
 xcuserdata/

@@ -1,43 +1,33 @@
+import GenioCore
 import SwiftUI
 import UIKit
 
-/// General settings. The model and the accounts (Claude key, ChatGPT plan)
-/// live on their own page, behind the first row.
+/// Settings: Gemini Live (key, model, voice, video), the vision coach,
+/// language, the glasses button, audio and camera tests, diagnostics.
 struct SettingsView: View {
   @ObservedObject var genio: GenioController
-  @ObservedObject var glasses: Glasses
+  @ObservedObject var glasses: GlassesManager
+  @ObservedObject var live: LiveConversationEngine
   @Environment(\.dismiss) private var dismiss
   @AppStorage(SettingKey.coachInterval) private var coachInterval = 6.0
+  @AppStorage(SettingKey.coachEnabled) private var coachEnabled = true
+  @AppStorage(SettingKey.coachModel) private var coachModel = ""
   @AppStorage(SettingKey.pressType) private var pressType = "shortPress"
-  @AppStorage(SettingKey.audioRoute) private var audioRoute = Voice.Route.media.rawValue
-  @AppStorage(SettingKey.provider) private var provider = "claude"
+  @AppStorage(SettingKey.geminiModel) private var geminiModel = LiveConversationEngine.defaultModel
+  @AppStorage(SettingKey.geminiVoice) private var geminiVoice = LiveConversationEngine.defaultVoice
+  @AppStorage(SettingKey.geminiFramesPerSecond) private var framesPerSecond = 1.0
   @AppStorage(VoiceLanguage.settingKey) private var voiceLanguage = VoiceLanguage.automatic
-  @State private var chatgptEmail: String?
-  @State private var chatgptSignedIn = false
+  @State private var apiKey = Keychain.geminiKey ?? ""
+  @State private var liveModels: [String] = []
+  @State private var coachModels: [String] = []
+  @State private var modelsError: String?
 
   var body: some View {
     NavigationStack {
       Form {
-        Section {
-          NavigationLink {
-            BrainSettingsView()
-          } label: {
-            HStack(spacing: 14) {
-              Image(systemName: "sparkles")
-                .font(.title3)
-                .foregroundStyle(Color.genioGold)
-                .frame(width: 34, height: 34)
-                .background(Color.genioNight, in: RoundedRectangle(cornerRadius: 8, style: .continuous))
-              VStack(alignment: .leading, spacing: 2) {
-                Text("Model and accounts")
-                Text(verbatim: brainSummary)
-                  .font(.footnote)
-                  .foregroundStyle(brainReady ? Color.secondary : Color.orange)
-              }
-            }
-            .padding(.vertical, 2)
-          }
-        }
+        geminiSection
+        if genio.active { statusSection }
+        coachSection
 
         Section {
           Picker("Voice language", selection: $voiceLanguage) {
@@ -52,23 +42,27 @@ struct SettingsView: View {
         } header: {
           Text("Language")
         } footer: {
-          Text("The voice language is what Genio speaks, understands (\"done\", \"repeat\"…) and answers in. The app's screens follow the iPhone's language; to change them for Genio only, open App language.")
+          Text("The voice language is what Genio speaks and answers in. The app's screens follow the iPhone's language; to change them for Genio only, open App language.")
         }
 
         Section {
-          Stepper("Looks every \(Int(coachInterval)) s", value: $coachInterval, in: 3...30, step: 1)
           Picker("Start/stop button", selection: $pressType) {
             Text("Short press").tag("shortPress")
             Text("Double press").tag("doublePress")
             Text("Long press").tag("hold")
           }
-          Picker("Audio", selection: $audioRoute) {
-            ForEach(Voice.Route.allCases) { Text($0.label).tag($0.rawValue) }
+          NavigationLink {
+            HardwareTestView(genio: genio, glasses: glasses, audio: genio.audio)
+          } label: {
+            Label("Test audio and camera", systemImage: "waveform.and.mic")
           }
+          .disabled(genio.active)
         } header: {
-          Text("Coach and glasses")
+          Text("Glasses")
         } footer: {
-          Text("The more often the coach looks, the quicker it reacts and the more it uses. If Genio's voice comes out of the phone instead of the glasses, try the \"Call\" audio.")
+          if genio.active {
+            Text("Switch GENIO off to run the tests.")
+          }
         }
 
         Section("Diagnostics") {
@@ -97,9 +91,11 @@ struct SettingsView: View {
         }
       }
       .navigationTitle("Settings")
-      // Also runs when coming back from the model page, so the summary
-      // reflects a sign-in or a key entered there.
-      .onAppear { Task { await refreshSummary() } }
+      .task { await loadModels() }
+      .onChange(of: apiKey) { _, newValue in
+        Keychain.geminiKey = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        UserDefaults.standard.removeObject(forKey: SettingKey.coachModelResolved)
+      }
       .toolbar {
         ToolbarItem(placement: .confirmationAction) {
           Button("Done") { dismiss() }
@@ -109,190 +105,193 @@ struct SettingsView: View {
     .tint(Color.genioViolet)
   }
 
-  private var brainReady: Bool {
-    provider == "chatgpt" ? chatgptSignedIn : !(Keychain.apiKey ?? "").isEmpty
-  }
+  // MARK: - Sections
 
-  private var brainSummary: String {
-    if provider == "chatgpt" {
-      return chatgptSignedIn
-        ? "ChatGPT · " + (chatgptEmail ?? String(localized: "signed in"))
-        : "ChatGPT · " + String(localized: "not signed in")
+  private var geminiSection: some View {
+    Section {
+      SecureField(text: $apiKey) { Text(verbatim: "AIza…") }
+        .textInputAutocapitalization(.never)
+        .autocorrectionDisabled()
+      Picker("Realtime model", selection: $geminiModel) {
+        ForEach(Self.withCurrent(liveModels, geminiModel, default: LiveConversationEngine.defaultModel), id: \.self) {
+          Text(verbatim: $0).tag($0)
+        }
+      }
+      Picker("Voice", selection: $geminiVoice) {
+        ForEach(LiveConversationEngine.voices, id: \.self) { Text(verbatim: $0).tag($0) }
+      }
+      VStack(alignment: .leading) {
+        Text("Video: \(framesPerSecond, specifier: "%.1f") frames per second")
+        Slider(value: $framesPerSecond, in: 0.2...1, step: 0.1)
+      }
+      if let modelsError {
+        Text(verbatim: modelsError)
+          .font(.footnote)
+          .foregroundStyle(Color.orange)
+      }
+    } header: {
+      Text("Gemini Live")
+    } footer: {
+      Text("A Gemini API key from aistudio.google.com. It stays in this iPhone's keychain. Changes apply the next time GENIO starts. Fewer frames per second use fewer tokens; the coach still looks every few seconds.")
     }
-    return (Keychain.apiKey ?? "").isEmpty
-      ? "Claude · " + String(localized: "API key missing")
-      : "Claude · " + String(localized: "API key set")
   }
 
-  private func refreshSummary() async {
-    chatgptSignedIn = await ChatGPTAuth.shared.isSignedIn
-    chatgptEmail = await ChatGPTAuth.shared.email
+  private var statusSection: some View {
+    Section {
+      LabeledContent("Connection") {
+        Text(statusText)
+          .foregroundStyle(statusColor)
+      }
+      LabeledContent("Microphone") {
+        Text(verbatim: genio.audio.route.input)
+          .foregroundStyle(genio.audio.micIsGlasses ? Color.primary : Color.orange)
+      }
+      LabeledContent("Frames sent") {
+        Text("\(live.metrics.framesSent) (dropped \(live.metrics.framesDropped), \(Int(live.metrics.frameLatency * 1000)) ms)")
+      }
+      LabeledContent("Session") {
+        Text("\(Int(live.metrics.connectedSeconds / 60)) min · \(live.metrics.totalTokens) tokens")
+      }
+    } header: {
+      Text("Now")
+    } footer: {
+      Text("Tokens as reported by Gemini for this session. Prices: ai.google.dev/pricing.")
+    }
+  }
+
+  private var coachSection: some View {
+    Section {
+      Toggle("Vision coach", isOn: $coachEnabled)
+      if coachEnabled {
+        Stepper("Looks every \(Int(coachInterval)) s", value: $coachInterval, in: 3...30, step: 1)
+        Picker("Coach model", selection: $coachModel) {
+          Text("Automatic").tag("")
+          ForEach(Self.withCurrent(coachModels, coachModel, default: nil), id: \.self) { Text(verbatim: $0).tag($0) }
+        }
+      }
+    } header: {
+      Text("Coach")
+    } footer: {
+      Text("A second, fast Gemini model looks at the camera every few seconds to check the step and spot mistakes, besides the conversation. A step moves on only after consistent evidence. Off: only the conversation checks, with fewer calls. Genio is not a safety device.")
+    }
+  }
+
+  // MARK: - Helpers
+
+  private var statusText: String {
+    switch live.status {
+    case .off: return String(localized: "Off")
+    case .connecting: return String(localized: "Connecting…")
+    case .live: return String(localized: "Live")
+    case .reconnecting(let attempt): return String(localized: "Reconnecting (\(attempt))…")
+    case .failed(let why): return why
+    }
+  }
+
+  private var statusColor: Color {
+    switch live.status {
+    case .live: return .green
+    case .failed: return .red
+    case .connecting, .reconnecting: return .orange
+    case .off: return .secondary
+    }
+  }
+
+  private func loadModels() async {
+    let key = Keychain.geminiKey ?? ""
+    guard !key.isEmpty else { return }
+    do {
+      liveModels = try await GeminiVisionCoach.listModels(apiKey: key, method: "bidiGenerateContent")
+      coachModels = try await GeminiVisionCoach.listModels(apiKey: key)
+        .filter { $0.contains("flash") || $0.contains("pro") }
+      modelsError = nil
+    } catch {
+      modelsError = String(localized: "Models unavailable: \(error.localizedDescription)")
+    }
+  }
+
+  /// The list with the current choice (and the default) always present.
+  private static func withCurrent(_ list: [String], _ current: String, default fallback: String?) -> [String] {
+    var result = list
+    for item in [fallback, current].compactMap({ $0 }) where !item.isEmpty && !result.contains(item) {
+      result.insert(item, at: 0)
+    }
+    return result
   }
 }
 
-/// Which model answers, and the accounts behind it: the Claude API key, or
-/// the ChatGPT plan with Claude as an optional backup.
-struct BrainSettingsView: View {
-  @State private var apiKey = Keychain.apiKey ?? ""
-  @AppStorage(SettingKey.provider) private var provider = "claude"
-  @AppStorage(SettingKey.smartModel) private var smartModel = "claude-opus-5-5"
-  @AppStorage(SettingKey.chatgptSmartModel) private var chatgptSmartModel = ""
-  @AppStorage(SettingKey.chatgptCoachModel) private var chatgptCoachModel = ""
-  @AppStorage(SettingKey.useBackup) private var useBackup = true
-  @State private var chatgptSignedIn = false
-  @State private var chatgptEmail: String?
-  @State private var chatgptModels: [ChatGPTBrain.Model] = []
-  @State private var chatgptBusy = false
-  @State private var chatgptError: String?
+/// Checks the hardware before relying on it: which microphone and speaker
+/// iOS actually uses (the glasses' over Bluetooth, or the phone's), the mic
+/// level, a chime on the speaker, and a fresh camera frame.
+struct HardwareTestView: View {
+  @ObservedObject var genio: GenioController
+  @ObservedObject var glasses: GlassesManager
+  @ObservedObject var audio: AudioManager
+  @State private var testingAudio = false
+  @State private var frame: (UIImage, TimeInterval)?
 
   var body: some View {
     Form {
       Section {
-        Picker("Main", selection: $provider) {
-          Text(verbatim: "Claude").tag("claude")
-          Text("ChatGPT (plan)").tag("chatgpt")
-        }
-        .pickerStyle(.segmented)
-        .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets())
-      } header: {
-        Text("Main")
-      } footer: {
-        if provider == "chatgpt" {
-          Text("Uses your ChatGPT Plus/Pro plan instead of API credit.")
+        if testingAudio {
+          LabeledContent("Microphone") { Text(verbatim: audio.route.input) }
+          LabeledContent("Speaker") { Text(verbatim: audio.route.output) }
+          ProgressView(value: Double(min(1, audio.inputLevel * 4)))
+            .tint(audio.micIsGlasses ? Color.green : Color.orange)
+          if !audio.micIsGlasses {
+            Text("The microphone is not the glasses: check that they are connected as Bluetooth audio in iOS Settings.")
+              .font(.footnote)
+              .foregroundStyle(Color.orange)
+          }
+          Button("Stop the audio test") { stopAudio() }
         } else {
-          Text("Claude with an API key: pay as you go, a few cents an hour.")
+          Button("Start the audio test") { Task { await startAudio() } }
         }
-      }
-
-      Section {
-        Toggle("Use the other as backup", isOn: $useBackup)
-      } footer: {
-        Text("If the main one can't answer (credit or plan limit used up, sign-in expired, service down), Genio asks the other one, when it is set up below.")
-      }
-
-      if provider == "chatgpt" {
-        chatgptSections
-        claudeSections
-      } else {
-        claudeSections
-        chatgptSections
-      }
-    }
-    .navigationTitle("Model and accounts")
-    .navigationBarTitleDisplayMode(.inline)
-    .task { await refreshChatGPT() }
-    .onChange(of: apiKey) { _, newValue in
-      Keychain.apiKey = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-  }
-
-  @ViewBuilder
-  private var claudeSections: some View {
-    Section {
-      claudeKeyField
-      Picker("Questions and plans", selection: $smartModel) {
-        Text(verbatim: "Claude Opus 5.5").tag("claude-opus-5-5")
-        Text(verbatim: "Claude Sonnet 5.5").tag("claude-sonnet-5-5")
-        Text(verbatim: "Claude Haiku 5.5").tag("claude-haiku-5-5")
-      }
-      LabeledContent("Coach") {
-        Text(verbatim: "Claude Haiku 5.5")
-      }
-    } header: {
-      Text("Claude (API key)")
-    } footer: {
-      Text("From console.anthropic.com. It stays in this iPhone's keychain.")
-    }
-  }
-
-  @ViewBuilder
-  private var chatgptSections: some View {
-    chatgptAccount
-    if chatgptSignedIn {
-      Section {
-        Picker("Coach", selection: $chatgptCoachModel) {
-          Text("Automatic").tag("")
-          ForEach(chatgptModels) { Text(verbatim: $0.name).tag($0.slug) }
-        }
-        Picker("Questions and plans", selection: $chatgptSmartModel) {
-          Text("Automatic").tag("")
-          ForEach(chatgptModels) { Text(verbatim: $0.name).tag($0.slug) }
+        if let error = audio.lastError {
+          Text(verbatim: error)
+            .font(.footnote)
+            .foregroundStyle(Color.red)
         }
       } header: {
-        Text("ChatGPT models")
+        Text("Audio")
       } footer: {
-        Text("Pick a fast model for the coach: it looks every few seconds.")
+        Text("Speak: the bar should move. You should hear a chime on the glasses. This uses the same two-way Bluetooth audio as Gemini Live.")
+      }
+
+      Section {
+        if case let (image, age)? = frame {
+          Image(uiImage: image)
+            .resizable()
+            .scaledToFit()
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+          Text("Frame from \(age, specifier: "%.1f") s ago")
+            .font(.footnote)
+            .foregroundStyle(age < 2 ? Color.secondary : Color.orange)
+        } else {
+          (glasses.status == .streaming ? Text("No frame yet.") : Text("Connect the glasses first."))
+            .foregroundStyle(.secondary)
+        }
+        Button("Take a frame") { frame = glasses.latestImage() }
+          .disabled(glasses.status != .streaming)
+      } header: {
+        Text("Camera")
       }
     }
+    .navigationTitle("Test audio and camera")
+    .navigationBarTitleDisplayMode(.inline)
+    .onDisappear { stopAudio() }
   }
 
-  private var claudeKeyField: some View {
-    SecureField(text: $apiKey) { Text(verbatim: "sk-ant-…") }
-      .textInputAutocapitalization(.never)
-      .autocorrectionDisabled()
+  private func startAudio() async {
+    audio.onMicrophonePCM = nil
+    testingAudio = await audio.configureLive()
+    if let chime = Voice.chimeBuffer(.on) { audio.playChime(chime) }
   }
 
-  private var chatgptAccount: some View {
-    Section {
-      if chatgptSignedIn {
-        LabeledContent("Account") {
-          Text(verbatim: chatgptEmail ?? "ChatGPT")
-        }
-        Button("Sign out of ChatGPT", role: .destructive) {
-          Task {
-            await ChatGPTAuth.shared.signOut()
-            await refreshChatGPT()
-          }
-        }
-      } else {
-        Button {
-          Task { await signInChatGPT() }
-        } label: {
-          HStack {
-            Text("Sign in with ChatGPT")
-            Spacer()
-            if chatgptBusy { ProgressView() }
-          }
-        }
-        .disabled(chatgptBusy)
-      }
-      if let chatgptError {
-        Text(verbatim: chatgptError)
-          .font(.footnote)
-          .foregroundStyle(Color.red)
-      }
-    } header: {
-      Text("ChatGPT (plan)")
-    } footer: {
-      Text("Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not.")
-    }
-  }
-
-  private func refreshChatGPT() async {
-    chatgptSignedIn = await ChatGPTAuth.shared.isSignedIn
-    chatgptEmail = await ChatGPTAuth.shared.email
-    guard chatgptSignedIn else {
-      chatgptModels = []
-      return
-    }
-    do {
-      chatgptModels = try await ChatGPTBrain.models()
-    } catch {
-      chatgptError = String(localized: "Models unavailable: \(error.localizedDescription)")
-    }
-  }
-
-  private func signInChatGPT() async {
-    chatgptBusy = true
-    chatgptError = nil
-    do {
-      try await ChatGPTAuth.shared.signIn()
-    } catch {
-      chatgptError = error.localizedDescription
-    }
-    chatgptBusy = false
-    await refreshChatGPT()
+  private func stopAudio() {
+    guard testingAudio else { return }
+    testingAudio = false
+    if !genio.active { audio.deactivate() }
   }
 }
 
