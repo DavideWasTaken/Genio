@@ -291,7 +291,7 @@ public final class TaskTools {
   /// Whether `words` (as quoted by the model) match what was transcribed:
   /// at least half of their words, and at least two when they have two or
   /// more, must appear there. Accents and case are ignored.
-  public static func saidRecently(_ words: String, in transcript: String) -> Bool {
+  public nonisolated static func saidRecently(_ words: String, in transcript: String) -> Bool {
     let quoted = normalizedWords(words)
     guard !quoted.isEmpty else { return false }
     let heard = Set(normalizedWords(transcript))
@@ -300,7 +300,7 @@ public final class TaskTools {
     return found >= min(2, quoted.count) && Double(found) / Double(quoted.count) >= 0.5
   }
 
-  static func normalizedWords(_ text: String) -> [String] {
+  nonisolated static func normalizedWords(_ text: String) -> [String] {
     let folded = text.folding(options: [.caseInsensitive, .diacriticInsensitive], locale: nil)
     return folded.split { !$0.isLetter && !$0.isNumber }.map(String.init)
   }

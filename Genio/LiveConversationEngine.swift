@@ -76,6 +76,8 @@ final class LiveConversationEngine: ObservableObject {
   /// Bumped by stop(): a start() still waiting (microphone permission,
   /// audio setup) sees it changed and gives up.
   private var startGeneration = 0
+  /// "Genio stop" was heard in this session (acted on once).
+  private var stopHeard = false
   /// Language of the current session, for the greeting.
   private var languageName = "Italian"
   /// Genio finished its turn: its next words start a new transcript.
@@ -112,6 +114,7 @@ final class LiveConversationEngine: ObservableObject {
     startGeneration += 1
     let myStart = startGeneration
     status = .connecting
+    stopHeard = false
     languageName = settings.languageName
     let (stream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingNewest(64))
     micContinuation = continuation
@@ -243,6 +246,12 @@ final class LiveConversationEngine: ObservableObject {
       }
       userTranscript += text
       heard.append((Date(), text))
+      // "Genio stop" switches off directly, whatever the model does.
+      if !stopHeard, VoiceStop.matches(userTranscript) {
+        stopHeard = true
+        onLog?("Heard \"\(userTranscript.trimmingCharacters(in: .whitespaces))\": switching off")
+        onPauseRequested?()
+      }
     case .outputTranscript(let text):
       if !userTurnEnded {
         userTurnEnded = true

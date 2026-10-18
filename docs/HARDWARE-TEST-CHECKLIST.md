@@ -23,7 +23,7 @@ key in Settings.
 ## 2. Session
 
 - [ ] Press the capture button: chime, Camera pill green, status "Live" in Settings → Log, microphone pill green.
-- [ ] Press again: the glasses take a photo and GENIO switches off (Log: "pressed while GENIO is on"); Camera pill goes grey.
+- [ ] Say "Genio stop": GENIO switches off (Log: "Heard \"Genio stop\": switching off"); Camera pill goes grey. (The capture button takes a photo while GENIO is on: the glasses keep it.)
 - [ ] With GENIO on, the glasses' end-call gesture on the touchpad switches GENIO off (Log: "Call: ended from the system").
 - [ ] Say "ciao": Genio answers in the chosen Gemini voice, on the glasses.
 - [ ] Transcripts of you and Genio appear on the main screen.
@@ -45,7 +45,7 @@ key in Settings.
 
 ## 4. Interruptions and recovery
 
-- [ ] "Genio stop" (or press the button): short goodbye, chime, GENIO off; task card shows *paused*.
+- [ ] "Genio stop": short goodbye, chime, GENIO off; task card shows *paused*.
 - [ ] Press again: Genio resumes from the same step without repeating the whole plan.
 - [ ] Force-quit the app mid-task, reopen: the task is restored (paused); press the button to resume.
 - [ ] Turn on airplane mode for 10 s mid-task: status "Reconnecting", then "Live" again; the task is unchanged and Genio continues.

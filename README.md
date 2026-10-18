@@ -96,10 +96,10 @@ There are no fixed commands: talk as you would to a person. These work in Englis
 | Next step | "done", "next" | "fatto", "avanti" |
 | Previous step | "go back" | "torna indietro" |
 | Start over | "new task" | "nuovo compito" |
-| Pause | "stop", "that's all" | "stop", "basta" |
+| Switch off | "Genio stop" | "Genio stop", "basta Genio" |
 | Questions | "which screw?", "is this right?", "I can't find the button" | "quale vite?", "è giusto così?", "non trovo il pulsante" |
 
-"Done", "back", "new task" and "stop" only count if the microphone transcript shows you said them: Gemini cannot invent them.
+"Done", "back" and "new task" only count if the microphone transcript shows you said them: Gemini cannot invent them. "Genio stop" is recognised directly in the transcript and always switches GENIO off.
 
 ## Cost
 
@@ -114,7 +114,7 @@ Genio is an early, personal project. Things to know:
 - **Bluetooth audio while the camera streams** must be checked on your hardware: some glasses or firmware may move audio between profiles while DAT streams video. The audio test in Settings and the on-screen microphone indicator show what iOS really uses.
 - **Inputs is experimental** in DAT SDK 1.0: fine for development and beta builds, not yet allowed in App Store releases. That's why Genio is built and installed from source.
 - **The glasses' own software must be current.** An older DAT component on the glasses refuses the session (`datAppOnTheGlassesUpdateRequired`); Genio shows an update button.
-- **Stopping with the button.** While the camera streams (GENIO on), the glasses keep the capture button for their own photo and video actions and do not pass the press to the app. Genio notices the glasses taking the camera for that photo (the stream pauses) and switches off; the photo is still taken. Saying "stop" or hanging up the "Genio" call (Dynamic Island, or the glasses' end-call gesture) also switches it off.
+- **Button to start, voice to stop.** While the camera streams (GENIO on), the glasses keep the capture button for their own photo and video actions and do not pass the press to the app. So the button starts GENIO, and "Genio stop" (or hanging up the "Genio" call in the Dynamic Island) switches it off.
 - **Battery.** The glasses' camera streams only while GENIO is on (or the camera test is open); idle, they keep just the button.
 - **In the background.** A GENIO session runs as a call (CallKit): iOS only lets an app switch the microphone on from the background during a call, so the glasses' button can start GENIO with the phone in a pocket. You see "Genio" as a call in the Dynamic Island; hanging up there switches GENIO off. With GENIO on, Genio keeps working with the screen locked. With GENIO off and the glasses connected, Genio keeps a silent audio session open (mixed with your music) so iOS does not suspend it and the glasses' button still works; it costs a little phone battery. iOS can still end the app (low memory, force-quit); the task is saved either way.
 - **Sessions.** Gemini Live connections last about 10 minutes; Genio moves to a new one with session resumption, so the conversation goes on. If resumption fails, Genio sends the task state again.

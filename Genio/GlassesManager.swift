@@ -41,11 +41,6 @@ final class GlassesManager: ObservableObject {
 
   /// A press of the capture button.
   var onPress: ((CapturePressType) -> Void)?
-  /// The capture button was pressed while the camera streamed. The glasses
-  /// keep the button for their own photo action then and do not pass the
-  /// press on; what the app sees is the stream pausing (or, if the SDK
-  /// delivers it, the photo).
-  var onCapturePressDuringStream: (() -> Void)?
   /// Diagnostic lines for the in-app log (errors, permission answers).
   var onLog: ((String) -> Void)?
 
@@ -340,23 +335,12 @@ final class GlassesManager: ObservableObject {
             // A camera starting again on a working session (GENIO switched
             // on) does not make the glasses less connected.
             if self.status != .connected { self.status = .waitingForGlasses }
-          case .paused:
-            // The glasses took the camera for their own photo or video:
-            // the capture button was pressed.
-            self.onCapturePressDuringStream?()
           case .stopped where self.streamingSince != nil:
             // Only a stream that was running: not one still starting up.
             self.restartCamera(on: session, reason: "stream stopped")
           default:
             break
           }
-        }
-      }.store(in: tokens)
-      newCamera.stream.photoDataPublisher.listen { [weak self] _ in
-        Task { @MainActor in
-          guard let self, self.camera === newCamera else { return }
-          self.log("Camera: the glasses took a photo (capture button)")
-          self.onCapturePressDuringStream?()
         }
       }.store(in: tokens)
       newCamera.stream.errorPublisher.listen { [weak self] error in

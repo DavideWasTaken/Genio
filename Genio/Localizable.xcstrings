@@ -651,12 +651,12 @@
         }
       }
     },
-    "Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\", \"stop\".": {
+    "Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\". Say \"Genio stop\" to switch off.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Parla normalmente: di' cosa stai facendo, chiedi quello che vuoi. \"Fatto\", \"indietro\", \"nuovo compito\", \"stop\"."
+            "value": "Parla normalmente: di' cosa stai facendo, chiedi quello che vuoi. \"Fatto\", \"indietro\", \"nuovo compito\". Di' \"Genio stop\" per spegnere."
           }
         }
       }

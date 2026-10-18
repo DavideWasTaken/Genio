@@ -140,3 +140,16 @@ final class TaskToolsTests: XCTestCase {
     XCTAssertFalse(TaskTools.saidRecently("nuovo compito", in: "che compito difficile"), "only half the words")
   }
 }
+
+final class VoiceStopTests: XCTestCase {
+  func testPhrasesThatNameGenio() {
+    XCTAssertTrue(VoiceStop.matches("Genio stop"))
+    XCTAssertTrue(VoiceStop.matches("ok, Genio, basta così"))
+    XCTAssertTrue(VoiceStop.matches("adesso ferma Genio per favore"))
+    XCTAssertTrue(VoiceStop.matches("STOP GENIO!"))
+    XCTAssertFalse(VoiceStop.matches("stop"), "a bare stop may be for someone else")
+    XCTAssertFalse(VoiceStop.matches("basta con questa vite"))
+    XCTAssertFalse(VoiceStop.matches("Genio, quale vite uso?"))
+    XCTAssertFalse(VoiceStop.matches("genio"))
+  }
+}

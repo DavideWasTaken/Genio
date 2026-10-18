@@ -38,8 +38,6 @@ enum Tuning {
 @MainActor
 final class GenioController: ObservableObject {
   @Published private(set) var active = false
-  /// When GENIO was switched on.
-  private var activeSince: Date?
   @Published private(set) var log: [String] = []
 
   let glasses = GlassesManager()
@@ -65,14 +63,6 @@ final class GenioController: ObservableObject {
 
   init() {
     glasses.onPress = { [weak self] press in self?.handlePress(press) }
-    // With the camera streaming, a capture press becomes a photo on the
-    // glasses instead of reaching Genio; the stream pausing for it means
-    // "stop". Ignored in the first seconds, while the camera starts.
-    glasses.onCapturePressDuringStream = { [weak self] in
-      guard let self, self.active, let since = self.activeSince, Date().timeIntervalSince(since) > 4 else { return }
-      self.note("Button: pressed while GENIO is on (the glasses took the camera), switching off")
-      self.stop()
-    }
     glasses.onLog = { [weak self] line in self?.note("Glasses: \(line)") }
     glasses.observeRegistration()
     audio.onLog = { [weak self] line in self?.note(line) }
@@ -138,7 +128,6 @@ final class GenioController: ObservableObject {
       return
     }
     active = true
-    activeSince = Date()
     UIApplication.shared.isIdleTimerDisabled = true
     glasses.setCamera(needed: true, by: "genio")
     taskEngine.resume()

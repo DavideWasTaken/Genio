@@ -47,7 +47,7 @@ struct ContentView: View {
             } else if genio.active, live.status == .connecting {
               Text("Connecting to Gemini…")
             } else if genio.active {
-              Text("Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\", \"stop\".")
+              Text("Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\". Say \"Genio stop\" to switch off.")
             } else if !glassesReady {
               Text("Connect the glasses first: GENIO needs their camera, button and microphone.")
             } else if (Keychain.geminiKey ?? "").isEmpty {
