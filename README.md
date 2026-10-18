@@ -74,8 +74,8 @@ Pick your iPhone in Xcode and press **Run**. Your Team ID is in Xcode → Settin
 In the app:
 
 1. **Link with Meta AI**: Meta AI opens to approve Genio.
-2. **Connect glasses**: wear them and approve the camera in Meta AI. *Camera* and *Button* turn green.
-3. ⚙️ **Settings → Gemini**: paste your Gemini API key and pick a voice. Optionally run **Test audio and camera** to check that iOS uses the glasses' microphone.
+2. **Connect glasses**: wear them and approve the camera in Meta AI. *Button* turns green; *Camera* stays off until Genio needs to see.
+3. ⚙️ **Settings → Gemini**: paste your Gemini API key and pick a voice. Under **Glasses**, choose the press that starts GENIO (short, double or long). Optionally run **Test audio and camera** to check that iOS uses the glasses' microphone.
 4. Press the button on your glasses and say what you're doing.
 
 ## Tests
@@ -99,6 +99,8 @@ There are no fixed commands: talk as you would to a person. These work in Englis
 | Next step | "done", "next" | "fatto", "avanti" |
 | Previous step | "go back" | "torna indietro" |
 | Start over | "new task" | "nuovo compito" |
+| Pick up an earlier task | "let's pick up the bookshelf" | "riprendiamo la libreria" |
+| Remember something | "remember I'm left-handed" | "ricordati che sono mancino" |
 | Switch off | "Genio stop" | "Genio stop", "basta Genio" |
 | Questions | "which screw?", "is this right?", "I can't find the button" | "quale vite?", "è giusto così?", "non trovo il pulsante" |
 
@@ -106,7 +108,7 @@ There are no fixed commands: talk as you would to a person. These work in Englis
 
 ## Cost
 
-Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); the vision coach adds one small image request every few seconds while a step is in progress. Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
+Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); while a step is in progress, the vision coach adds one small image request every few seconds and Genio sends a short "is the step done?" check to Gemini Live every 10 s of silence. Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
 
 ## Status and caveats
 
@@ -135,11 +137,13 @@ There's no Genio server. Microphone audio, sampled camera frames, transcripts an
 | `Genio/AudioManager.swift` | Audio session and engine: HFP two-way audio, echo cancellation, playback, route checks |
 | `Genio/CoachEngine.swift` | The periodic vision coach |
 | `Genio/GenioController.swift` | GENIO on/off, wiring, task events |
+| `Genio/CallSession.swift` | GENIO sessions as CallKit calls, so the microphone can start from the background |
+| `Genio/Keychain.swift` | The Gemini API key in the iPhone keychain |
 | `Genio/Voice.swift` | Chimes, and the iOS voice for lines Gemini cannot say (no key, no connection) |
 | `Genio/ContentView.swift` · `SettingsView.swift` · `Theme.swift` | SwiftUI screens, audio and camera tests |
 | `Genio/Localizable.xcstrings` | Italian translation of the UI |
-| `Packages/GenioCore/Sources/GenioCore/Task` | `TaskEngine`, `CompletionVerifier`, `GenioTask`, persistence |
-| `Packages/GenioCore/Sources/GenioCore/Live` | Gemini Live wire format, `GeminiLiveSession`, `TaskTools`, instructions |
+| `Packages/GenioCore/Sources/GenioCore/Task` | `TaskEngine`, `CompletionVerifier`, `GenioTask`, memory (`MemorySummary`), persistence |
+| `Packages/GenioCore/Sources/GenioCore/Live` | Gemini Live wire format, `GeminiLiveSession`, `TaskTools`, instructions, `VoiceStop`, `StepCheckPolicy` |
 | `Packages/GenioCore/Sources/GenioCore/Coach` | `GeminiVisionCoach` (REST) and model selection |
 | `Packages/GenioCore/Sources/GenioCore/Media` | `FramePacer`, PCM helpers |
 | `tools/make_icon.py` | Draws the app icon |
