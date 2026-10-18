@@ -63,6 +63,8 @@ final class GlassesManager: ObservableObject {
   private let latest = LatestFrame()
   /// Who needs the camera now ("genio", "test"); empty: it is paused.
   private var cameraUsers: Set<String> = []
+  /// The current Inputs reached `.active` at least once.
+  private var buttonWasActive = false
 
   private enum Access: Equatable {
     case granted
@@ -466,18 +468,45 @@ final class GlassesManager: ObservableObject {
       }
       inputs = newInputs
       buttonReady = true
+      buttonWasActive = false
       sessionTasks.append(Task { [weak self] in
         for await event in newInputs.events {
           if case let .capture(pressType, _, _) = event {
             self?.onPress?(pressType)
+          } else {
+            self?.log("Input: \(event)")
           }
         }
       })
+      newInputs.statePublisher.listen { [weak self] state in
+        Task { @MainActor in self?.inputsStateChanged(state, inputs: newInputs, session: session) }
+      }.store(in: tokens)
       newInputs.errorPublisher.listen { [weak self] error in
         Task { @MainActor in self?.log("Button error: \(error)") }
       }.store(in: tokens)
     } catch {
       log("Button not attached: \(error)")
+    }
+  }
+
+  /// Logs the button's state and attaches it again if it stops while the
+  /// session is still up (presses would then go to the glasses' own photo
+  /// and video actions).
+  private func inputsStateChanged(_ state: InputsState, inputs current: Inputs, session: DeviceSession) {
+    guard inputs === current else { return }
+    log("Button: \(state)\(cameraActive ? " (camera on)" : "")")
+    if state == .active { buttonWasActive = true }
+    buttonReady = state == .active || !buttonWasActive
+    // Only an Inputs that had been working: one still starting up passes
+    // through .inactive on its own.
+    guard state == .inactive, buttonWasActive, self.session === session else { return }
+    inputs = nil
+    try? session.removeInputs()
+    Task { [weak self] in
+      try? await Task.sleep(for: .seconds(1))
+      guard let self, self.session === session, self.inputs == nil else { return }
+      self.log("Button: attaching again")
+      self.attachButton(to: session)
     }
   }
 }
