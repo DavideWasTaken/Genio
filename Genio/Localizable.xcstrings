@@ -31,16 +31,6 @@
         }
       }
     },
-    "A second Gemini model checks the camera every few seconds to confirm steps and spot mistakes. Off: fewer calls, only the conversation checks. Genio is not a safety device.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Un secondo modello Gemini controlla la fotocamera ogni pochi secondi per confermare i passi e notare errori. Spento: meno chiamate, controlla solo la conversazione. Genio non è un dispositivo di sicurezza."
-          }
-        }
-      }
-    },
     "Add your Gemini API key in Settings, then press the button on your glasses.": {
       "localizations": {
         "it": {
@@ -757,16 +747,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aggiorna il software degli occhiali"
-          }
-        }
-      }
-    },
-    "Vision coach": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach visivo"
           }
         }
       }

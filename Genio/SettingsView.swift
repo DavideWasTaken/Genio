@@ -10,7 +10,6 @@ struct SettingsView: View {
   @ObservedObject var glasses: GlassesManager
   @ObservedObject var live: LiveConversationEngine
   @Environment(\.dismiss) private var dismiss
-  @AppStorage(SettingKey.coachEnabled) private var coachEnabled = true
   @AppStorage(SettingKey.pressType) private var pressType = "shortPress"
   @AppStorage(SettingKey.geminiVoice) private var geminiVoice = LiveConversationEngine.defaultVoice
   @AppStorage(VoiceLanguage.settingKey) private var voiceLanguage = VoiceLanguage.automatic
@@ -38,12 +37,6 @@ struct SettingsView: View {
           Text(verbatim: "Gemini")
         } footer: {
           Text("Your Gemini API key from aistudio.google.com, kept in this iPhone's keychain. Changes apply the next time GENIO starts.")
-        }
-
-        Section {
-          Toggle("Vision coach", isOn: $coachEnabled)
-        } footer: {
-          Text("A second Gemini model checks the camera every few seconds to confirm steps and spot mistakes. Off: fewer calls, only the conversation checks. Genio is not a safety device.")
         }
 
         Section {

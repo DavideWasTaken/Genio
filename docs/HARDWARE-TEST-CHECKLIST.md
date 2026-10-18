@@ -60,7 +60,6 @@ key in Settings.
 ## 5. Settings
 
 - [ ] Change the voice and the voice language: applied at the next start.
-- [ ] Coach off: steps still advance on "fatto" and on Gemini's own looks; the Log shows no coach lines.
 - [ ] Settings → Log while GENIO is on: frames sent grow by about one a second; tokens grow.
 
 ## Known risks to watch

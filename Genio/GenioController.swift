@@ -8,8 +8,6 @@ import UIKit
 enum SettingKey {
   static let pressType = "pressType"
   static let geminiVoice = "geminiVoice"
-  /// The periodic vision coach (a separate Gemini model) on or off.
-  static let coachEnabled = "coachEnabled"
   /// The coach's model, picked automatically and cached.
   static let coachModelResolved = "coachModelResolved"
 }
@@ -95,10 +93,6 @@ final class GenioController: ObservableObject {
     if let task = taskEngine.task {
       note("Restored: \(task.goal), step \(task.current + 1) of \(task.steps.count)")
     }
-  }
-
-  private var coachEnabled: Bool {
-    defaults.object(forKey: SettingKey.coachEnabled) as? Bool ?? true
   }
 
   // MARK: - Button
@@ -220,7 +214,7 @@ final class GenioController: ObservableObject {
 
   private func updateCoach() {
     let hasStep = task?.currentStep != nil && !taskEngine.paused
-    if active, coachEnabled, hasStep, live.isActive {
+    if active, hasStep, live.isActive {
       coach.start()
     } else {
       coach.stop()

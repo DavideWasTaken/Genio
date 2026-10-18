@@ -103,7 +103,7 @@ There are no fixed commands: talk as you would to a person. These work in Englis
 
 ## Cost
 
-Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); the vision coach adds one small image request every few seconds while a step is in progress. To spend less, turn the vision coach off (Settings). Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
+Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); the vision coach adds one small image request every few seconds while a step is in progress. Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
 
 ## Status and caveats
 

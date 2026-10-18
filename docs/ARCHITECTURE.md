@@ -125,8 +125,8 @@ and the step to a separate Gemini model through `generateContent` with a JSON
 schema (`verdict`, `evidence`, `say`, `kind`). The verdict becomes an
 observation for the engine; a remark is relayed to Gemini Live (which says it
 in its own voice) only if the engine allows it: hazards at most every 5 s,
-mistakes every 15 s, never a repeat, never `info`. Turning the coach off leaves
-Gemini Live's own looks as the only check (fewer calls).
+mistakes every 15 s, never a repeat, never `info`. The coach is always on: it
+is what checks the steps; Gemini Live alone rarely looks unprompted.
 
 ## Persistence and lifecycle
 
@@ -143,8 +143,8 @@ Gemini Live's own looks as the only check (fewer calls).
   so iOS does not suspend the app and the capture button still arrives. iOS
   can still terminate the app; nothing more is promised.
 - Settings changes (voice, voice language, coach) apply at the next start.
-- Settings are kept to what a user needs: key, voice, voice language, coach
-  on/off, button press, hardware test, log. Model, coach pace and video rate
+- Settings are kept to what a user needs: key, voice, voice language, button
+  press, hardware test, log. The vision coach is always on. Model, coach pace and video rate
   are fixed in code (`LiveConversationEngine.defaultModel`, `Tuning`).
 
 ## Security
