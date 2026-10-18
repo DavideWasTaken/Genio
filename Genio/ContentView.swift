@@ -5,7 +5,6 @@ struct ContentView: View {
   @ObservedObject var genio: GenioController
   @ObservedObject var glasses: GlassesManager
   @ObservedObject var live: LiveConversationEngine
-  @Environment(\.scenePhase) private var scenePhase
   @State private var showSettings = false
 
   private var glassesReady: Bool { glasses.status == .connected }
@@ -93,9 +92,6 @@ struct ContentView: View {
       // task stays saved and resumes with the next press.
       .onChange(of: glasses.status) { _, status in
         if status != .connected && genio.active { genio.stop() }
-      }
-      .onChange(of: scenePhase) { _, phase in
-        genio.appWentToBackground(phase == .background)
       }
       .sheet(isPresented: $showSettings) {
         SettingsView(genio: genio, glasses: glasses, live: live)

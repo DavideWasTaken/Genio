@@ -79,6 +79,10 @@ final class GenioController: ObservableObject {
       guard case .failed(let reason) = status else { return }
       Task { @MainActor in self?.liveFailed(reason) }
     }.store(in: &cancellables)
+    // Glasses connected and GENIO off: keep the app alive for the button.
+    glasses.$status.removeDuplicates().sink { [weak self] _ in
+      Task { @MainActor in self?.restoreIdleAudio() }
+    }.store(in: &cancellables)
     NotificationCenter.default.addObserver(forName: GenioLog.notification, object: nil, queue: .main) { [weak self] note in
       guard let line = note.userInfo?["line"] as? String else { return }
       MainActor.assumeIsolated { self?.note(line) }
@@ -158,7 +162,19 @@ final class GenioController: ObservableObject {
     // Give the chime time to play, then release the microphone.
     Task {
       try? await Task.sleep(for: .seconds(0.6))
-      if !active { audio.deactivate() }
+      restoreIdleAudio()
+    }
+  }
+
+  /// The audio GENIO-off needs: standby (silent, keeps iOS from suspending
+  /// the app so the glasses' button still works in the background) while the
+  /// glasses are connected, nothing otherwise.
+  func restoreIdleAudio() {
+    guard !active else { return }
+    if glasses.status == .connected {
+      audio.configureStandby()
+    } else if audio.mode != .idle {
+      audio.deactivate()
     }
   }
 
@@ -176,14 +192,6 @@ final class GenioController: ObservableObject {
     note("Gemini Live stopped: \(reason)")
     stop()
     speakFallback(reason.localizedCaseInsensitiveContains("key") ? .noGeminiKey : .unreachable)
-  }
-
-  /// The app moved to the background or back.
-  func appWentToBackground(_ background: Bool) {
-    guard active else { return }
-    // iOS may keep the audio alive in the background; the camera frames are
-    // not worth sending then.
-    live.setVideoPaused(background)
   }
 
   // MARK: - Task events
@@ -227,7 +235,10 @@ final class GenioController: ObservableObject {
     let text = language.say(line)
     note("Genio: \(text)")
     let code = language.voiceCode
-    Task { await voice.speak(text, languageCode: code) }
+    Task {
+      await voice.speak(text, languageCode: code)
+      restoreIdleAudio()
+    }
   }
 
   private func note(_ line: String) {

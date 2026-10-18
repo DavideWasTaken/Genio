@@ -11,6 +11,9 @@ import GenioCore
 ///  - Live: play-and-record over the Bluetooth hands-free profile, so the
 ///    glasses' microphone feeds Gemini and Gemini's voice plays on the
 ///    glasses; voice processing cancels Genio's own voice from the mic.
+///  - Standby: glasses connected, GENIO off. Silent playback, mixed with
+///    other apps, keeps iOS from suspending Genio in the background, so the
+///    glasses' button still reaches it.
 ///
 /// The route is checked, never assumed: `route` says which microphone and
 /// speaker iOS actually picked, and `micIsGlasses` is false when the phone's
@@ -21,6 +24,7 @@ final class AudioManager: ObservableObject {
     case idle
     case classic(Voice.Route)
     case live
+    case standby
   }
 
   struct RouteInfo: Equatable {
@@ -48,6 +52,8 @@ final class AudioManager: ObservableObject {
   private var engine = AVAudioEngine()
   private let tonePlayer = AVAudioPlayerNode()
   private let voicePlayer = AVAudioPlayerNode()
+  /// Plays silence in a loop in standby.
+  private let keepAlivePlayer = AVAudioPlayerNode()
   private let toneFormat = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
   /// Gemini Live's output: 24 kHz mono.
   private let voiceFormat = AVAudioFormat(standardFormatWithSampleRate: 24_000, channels: 1)!
@@ -124,9 +130,34 @@ final class AudioManager: ObservableObject {
     return startCapture()
   }
 
+  /// Glasses connected, GENIO off: silent playback that keeps iOS from
+  /// suspending the app, so the glasses' button still works with Genio in
+  /// the background. Mixed with other apps: music is not interrupted.
+  func configureStandby() {
+    guard mode != .standby else { return }
+    stopCapture()
+    flushVoice()
+    let session = AVAudioSession.sharedInstance()
+    do {
+      try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
+      try session.setActive(true)
+      lastError = nil
+    } catch {
+      report("audio session (standby): \(error.localizedDescription)")
+      return
+    }
+    rebuildEngine()
+    mode = .standby
+    refreshRoute()
+    if startKeepAlive() {
+      onLog?("Audio: standby, so the glasses' button works with Genio in the background")
+    }
+  }
+
   func deactivate() {
     stopCapture()
     flushVoice()
+    keepAlivePlayer.stop()
     engine.stop()
     try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
     mode = .idle
@@ -220,11 +251,29 @@ final class AudioManager: ObservableObject {
     engine.stop()
     if tonePlayer.engine != nil { engine.detach(tonePlayer) }
     if voicePlayer.engine != nil { engine.detach(voicePlayer) }
+    if keepAlivePlayer.engine != nil { engine.detach(keepAlivePlayer) }
     engine = AVAudioEngine()
     engine.attach(tonePlayer)
     engine.connect(tonePlayer, to: engine.mainMixerNode, format: toneFormat)
     engine.attach(voicePlayer)
     engine.connect(voicePlayer, to: engine.mainMixerNode, format: voiceFormat)
+    engine.attach(keepAlivePlayer)
+    engine.connect(keepAlivePlayer, to: engine.mainMixerNode, format: toneFormat)
+  }
+
+  /// One second of silence, looped.
+  @discardableResult
+  private func startKeepAlive() -> Bool {
+    guard startEngine(),
+          let silence = AVAudioPCMBuffer(pcmFormat: toneFormat, frameCapacity: AVAudioFrameCount(toneFormat.sampleRate)),
+          let channel = silence.floatChannelData?[0]
+    else { return false }
+    silence.frameLength = silence.frameCapacity
+    channel.update(repeating: 0, count: Int(silence.frameLength))
+    keepAlivePlayer.stop()
+    keepAlivePlayer.scheduleBuffer(silence, at: nil, options: .loops)
+    keepAlivePlayer.play()
+    return true
   }
 
   @discardableResult
@@ -244,10 +293,13 @@ final class AudioManager: ObservableObject {
   private func restartEngineIfNeeded() {
     guard mode != .idle, !engine.isRunning else { return }
     onLog?("Audio: engine configuration changed, restarting")
-    if mode == .live {
+    switch mode {
+    case .live:
       stopCapture()
       _ = startCapture()
-    } else {
+    case .standby:
+      startKeepAlive()
+    default:
       startEngine()
     }
   }
@@ -296,6 +348,7 @@ final class AudioManager: ObservableObject {
     switch current {
     case .classic(let route): configureClassic(route: route)
     case .live: Task { _ = await configureLive() }
+    case .standby: configureStandby()
     case .idle: break
     }
   }

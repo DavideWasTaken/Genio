@@ -52,7 +52,9 @@ key in Settings.
 - [ ] Fold or take off the glasses: GENIO switches off; task kept.
 - [ ] Phone call during a session: audio pauses; after the call Genio works again (or reconnects).
 - [ ] Wrong API key: GENIO does not start; an iOS-voice line says the key is missing/invalid; no retry loop in the Log.
-- [ ] Send the app to the background for 30 s and back: video resumes (frames sent keeps growing).
+- [ ] GENIO on, lock the phone and put it in a pocket for 2 minutes: the conversation goes on and Genio still sees (ask "what do you see?"); frames sent keeps growing.
+- [ ] GENIO off, glasses connected, app in the background (or phone locked) for 5 minutes: the glasses' button starts GENIO.
+- [ ] With music playing from another app and GENIO off: the music is not interrupted by Genio's standby.
 
 ## 5. Settings
 

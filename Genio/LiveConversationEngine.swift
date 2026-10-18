@@ -72,7 +72,6 @@ final class LiveConversationEngine: ObservableObject {
   private var inToolCall = false
   /// The task revision Gemini last saw (to resync after a reconnect).
   private var syncedRevision: Int?
-  private var videoPaused = false
   /// Bumped by stop(): a start() still waiting (microphone permission,
   /// audio setup) sees it changed and gives up.
   private var startGeneration = 0
@@ -159,12 +158,6 @@ final class LiveConversationEngine: ObservableObject {
     }
     cleanUp()
     status = .off
-  }
-
-  /// Video only while it helps: paused in the background or on demand.
-  func setVideoPaused(_ paused: Bool) {
-    videoPaused = paused
-    pacer.paused = paused
   }
 
   // MARK: - App events for the conversation
@@ -277,7 +270,9 @@ final class LiveConversationEngine: ObservableObject {
   // MARK: - Video
 
   private func videoTick() async {
-    guard let session, status == .live, !videoPaused else { return }
+    // Runs in the background too (phone in a pocket): iOS keeps the app
+    // alive while the microphone is open.
+    guard let session, status == .live else { return }
     if let since = connectedSince { metrics.connectedSeconds = Date().timeIntervalSince(since) }
     guard pacer.decide(frameTime: glasses.latestFrameTime, now: Date()) == .send else {
       syncMetrics(session)

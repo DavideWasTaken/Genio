@@ -167,7 +167,7 @@ struct HardwareTestView: View {
   private func stopAudio() {
     guard testingAudio else { return }
     testingAudio = false
-    if !genio.active { audio.deactivate() }
+    genio.restoreIdleAudio()
   }
 }
 

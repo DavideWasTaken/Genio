@@ -94,6 +94,8 @@ the system instruction and a `[Genio]` recovery message carry the task again.
 - DAT Speech is not used: Gemini does the listening, so nothing is recognised
   twice. AVSpeechSynthesizer is used only for lines Gemini cannot say (no key,
   no connection).
+- Standby (glasses connected, GENIO off): silent looped playback, mixed with
+  other apps, so the app stays alive in the background for the button.
 - Interruptions (calls, Siri), route changes, engine configuration changes and
   media-services resets restart or rebuild the engine.
 
@@ -106,8 +108,8 @@ glasses keep only the button and save battery. Only the newest frame is kept.
 `FramePacer` takes at most one frame per interval (≤ 1 fps), only if it is
 fresher than 1.5 s, and only when the previous one has finished encoding and
 sending (no queue: a slow network drops frames instead of sending old ones).
-Encoding (UIImage → scaled JPEG) runs on a background task. Video pauses when
-the app goes to the background. Metrics: frames sent and dropped, average
+Encoding (UIImage → scaled JPEG) runs on a background task. Video keeps
+flowing with the app in the background (phone in a pocket). Metrics: frames sent and dropped, average
 latency from frame arrival to send.
 
 ## Coach
@@ -129,8 +131,12 @@ Gemini Live's own looks as the only check (fewer calls).
 - Internet lost: the session reconnects with backoff; the task engine and the
   UI keep working; after too many failures GENIO switches off and says why in
   the iOS voice.
-- App in the background: video pauses; iOS may suspend the app. No promise of
-  background operation.
+- App in the background with GENIO on: everything keeps running; the open
+  microphone (audio background mode) keeps the app alive.
+- App in the background with GENIO off: AudioManager's *standby* mode plays
+  silence (`.playback` + `.mixWithOthers`) while the glasses are connected,
+  so iOS does not suspend the app and the capture button still arrives. iOS
+  can still terminate the app; nothing more is promised.
 - Settings changes (voice, voice language, coach) apply at the next start.
 - Settings are kept to what a user needs: key, voice, voice language, coach
   on/off, button press, hardware test, log. Model, coach pace and video rate
