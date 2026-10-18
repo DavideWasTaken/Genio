@@ -1,6 +1,6 @@
 import Foundation
 
-/// A line for the in-app Log (Settings → Diagnostics; also printed to the
+/// A line for the in-app Log (Settings → Log; also printed to the
 /// Xcode console) from code that has no handle on the controller. Safe from
 /// any thread or actor.
 enum GenioLog {

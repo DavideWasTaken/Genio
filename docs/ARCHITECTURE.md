@@ -109,7 +109,7 @@ latency from frame arrival to send.
 
 ## Coach
 
-`CoachEngine` runs every `coachInterval` seconds (6 by default) while a step is
+`CoachEngine` runs every 6 seconds (`Tuning.coachInterval`) while a step is
 in progress and Genio is not speaking. It sends the newest frame (≤ 1024 px)
 and the step to a separate Gemini model through `generateContent` with a JSON
 schema (`verdict`, `evidence`, `say`, `kind`). The verdict becomes an
@@ -128,7 +128,10 @@ Gemini Live's own looks as the only check (fewer calls).
   the iOS voice.
 - App in the background: video pauses; iOS may suspend the app. No promise of
   background operation.
-- Settings changes (model, voice, frame rate) apply at the next start.
+- Settings changes (voice, voice language, coach) apply at the next start.
+- Settings are kept to what a user needs: key, voice, voice language, coach
+  on/off, button press, hardware test, log. Model, coach pace and video rate
+  are fixed in code (`LiveConversationEngine.defaultModel`, `Tuning`).
 
 ## Security
 

@@ -2,47 +2,44 @@ import GenioCore
 import SwiftUI
 import UIKit
 
-/// Settings: Gemini Live (key, model, voice, video), the vision coach,
-/// language, the glasses button, audio and camera tests, diagnostics.
+/// Settings: only what changes how Genio works for you. The technical
+/// choices (realtime model, coach model and pace, video rate) use sensible
+/// defaults; the session's numbers are in the Log.
 struct SettingsView: View {
   @ObservedObject var genio: GenioController
   @ObservedObject var glasses: GlassesManager
   @ObservedObject var live: LiveConversationEngine
   @Environment(\.dismiss) private var dismiss
-  @AppStorage(SettingKey.coachInterval) private var coachInterval = 6.0
   @AppStorage(SettingKey.coachEnabled) private var coachEnabled = true
-  @AppStorage(SettingKey.coachModel) private var coachModel = ""
   @AppStorage(SettingKey.pressType) private var pressType = "shortPress"
-  @AppStorage(SettingKey.geminiModel) private var geminiModel = LiveConversationEngine.defaultModel
   @AppStorage(SettingKey.geminiVoice) private var geminiVoice = LiveConversationEngine.defaultVoice
-  @AppStorage(SettingKey.geminiFramesPerSecond) private var framesPerSecond = 1.0
   @AppStorage(VoiceLanguage.settingKey) private var voiceLanguage = VoiceLanguage.automatic
   @State private var apiKey = Keychain.geminiKey ?? ""
-  @State private var liveModels: [String] = []
-  @State private var coachModels: [String] = []
-  @State private var modelsError: String?
 
   var body: some View {
     NavigationStack {
       Form {
-        geminiSection
-        if genio.active { statusSection }
-        coachSection
-
         Section {
+          SecureField(text: $apiKey) { Text(verbatim: "AIza…") }
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+          Picker("Voice", selection: $geminiVoice) {
+            ForEach(LiveConversationEngine.voices, id: \.self) { Text(verbatim: $0).tag($0) }
+          }
           Picker("Voice language", selection: $voiceLanguage) {
             Text("Automatic (iPhone)").tag(VoiceLanguage.automatic)
             ForEach(VoiceLanguage.allCases) { Text(verbatim: $0.displayName).tag($0.rawValue) }
           }
-          Button("App language") {
-            if let url = URL(string: UIApplication.openSettingsURLString) {
-              UIApplication.shared.open(url)
-            }
-          }
         } header: {
-          Text("Language")
+          Text(verbatim: "Gemini")
         } footer: {
-          Text("The voice language is what Genio speaks and answers in. The app's screens follow the iPhone's language; to change them for Genio only, open App language.")
+          Text("Your Gemini API key from aistudio.google.com, kept in this iPhone's keychain. Changes apply the next time GENIO starts.")
+        }
+
+        Section {
+          Toggle("Vision coach", isOn: $coachEnabled)
+        } footer: {
+          Text("A second Gemini model checks the camera every few seconds to confirm steps and spot mistakes. Off: fewer calls, only the conversation checks. Genio is not a safety device.")
         }
 
         Section {
@@ -54,44 +51,31 @@ struct SettingsView: View {
           NavigationLink {
             HardwareTestView(genio: genio, glasses: glasses, audio: genio.audio)
           } label: {
-            Label("Test audio and camera", systemImage: "waveform.and.mic")
+            Text("Test audio and camera")
           }
           .disabled(genio.active)
         } header: {
           Text("Glasses")
         } footer: {
-          if genio.active {
-            Text("Switch GENIO off to run the tests.")
-          }
+          Text("If a short press also takes a photo, pick double or long press.")
         }
 
-        Section("Diagnostics") {
+        Section {
           NavigationLink {
-            LogView(genio: genio)
+            LogView(genio: genio, live: live)
           } label: {
             LabeledContent("Log") {
               Text("\(genio.log.count) lines")
             }
           }
-          ForEach(glasses.deviceLines, id: \.self) { line in
-            Label(line, systemImage: "eyeglasses")
-              .font(.footnote)
-          }
-        }
-
-        Section {
-          LabeledContent("Version") {
-            Text(verbatim: Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?")
-          }
+        } footer: {
           Link(destination: URL(string: "https://github.com/DavideWasTaken/Genio")!) {
-            Label("Source code on GitHub", systemImage: "chevron.left.forwardslash.chevron.right")
+            Text(verbatim: "Genio \(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "") · GitHub")
           }
-        } header: {
-          Text("About")
+          .font(.footnote)
         }
       }
       .navigationTitle("Settings")
-      .task { await loadModels() }
       .onChange(of: apiKey) { _, newValue in
         Keychain.geminiKey = newValue.trimmingCharacters(in: .whitespacesAndNewlines)
         UserDefaults.standard.removeObject(forKey: SettingKey.coachModelResolved)
@@ -103,120 +87,6 @@ struct SettingsView: View {
       }
     }
     .tint(Color.genioViolet)
-  }
-
-  // MARK: - Sections
-
-  private var geminiSection: some View {
-    Section {
-      SecureField(text: $apiKey) { Text(verbatim: "AIza…") }
-        .textInputAutocapitalization(.never)
-        .autocorrectionDisabled()
-      Picker("Realtime model", selection: $geminiModel) {
-        ForEach(Self.withCurrent(liveModels, geminiModel, default: LiveConversationEngine.defaultModel), id: \.self) {
-          Text(verbatim: $0).tag($0)
-        }
-      }
-      Picker("Voice", selection: $geminiVoice) {
-        ForEach(LiveConversationEngine.voices, id: \.self) { Text(verbatim: $0).tag($0) }
-      }
-      VStack(alignment: .leading) {
-        Text("Video: \(framesPerSecond, specifier: "%.1f") frames per second")
-        Slider(value: $framesPerSecond, in: 0.2...1, step: 0.1)
-      }
-      if let modelsError {
-        Text(verbatim: modelsError)
-          .font(.footnote)
-          .foregroundStyle(Color.orange)
-      }
-    } header: {
-      Text("Gemini Live")
-    } footer: {
-      Text("A Gemini API key from aistudio.google.com. It stays in this iPhone's keychain. Changes apply the next time GENIO starts. Fewer frames per second use fewer tokens; the coach still looks every few seconds.")
-    }
-  }
-
-  private var statusSection: some View {
-    Section {
-      LabeledContent("Connection") {
-        Text(statusText)
-          .foregroundStyle(statusColor)
-      }
-      LabeledContent("Microphone") {
-        Text(verbatim: genio.audio.route.input)
-          .foregroundStyle(genio.audio.micIsGlasses ? Color.primary : Color.orange)
-      }
-      LabeledContent("Frames sent") {
-        Text("\(live.metrics.framesSent) (dropped \(live.metrics.framesDropped), \(Int(live.metrics.frameLatency * 1000)) ms)")
-      }
-      LabeledContent("Session") {
-        Text("\(Int(live.metrics.connectedSeconds / 60)) min · \(live.metrics.totalTokens) tokens")
-      }
-    } header: {
-      Text("Now")
-    } footer: {
-      Text("Tokens as reported by Gemini for this session. Prices: ai.google.dev/pricing.")
-    }
-  }
-
-  private var coachSection: some View {
-    Section {
-      Toggle("Vision coach", isOn: $coachEnabled)
-      if coachEnabled {
-        Stepper("Looks every \(Int(coachInterval)) s", value: $coachInterval, in: 3...30, step: 1)
-        Picker("Coach model", selection: $coachModel) {
-          Text("Automatic").tag("")
-          ForEach(Self.withCurrent(coachModels, coachModel, default: nil), id: \.self) { Text(verbatim: $0).tag($0) }
-        }
-      }
-    } header: {
-      Text("Coach")
-    } footer: {
-      Text("A second, fast Gemini model looks at the camera every few seconds to check the step and spot mistakes, besides the conversation. A step moves on only after consistent evidence. Off: only the conversation checks, with fewer calls. Genio is not a safety device.")
-    }
-  }
-
-  // MARK: - Helpers
-
-  private var statusText: String {
-    switch live.status {
-    case .off: return String(localized: "Off")
-    case .connecting: return String(localized: "Connecting…")
-    case .live: return String(localized: "Live")
-    case .reconnecting(let attempt): return String(localized: "Reconnecting (\(attempt))…")
-    case .failed(let why): return why
-    }
-  }
-
-  private var statusColor: Color {
-    switch live.status {
-    case .live: return .green
-    case .failed: return .red
-    case .connecting, .reconnecting: return .orange
-    case .off: return .secondary
-    }
-  }
-
-  private func loadModels() async {
-    let key = Keychain.geminiKey ?? ""
-    guard !key.isEmpty else { return }
-    do {
-      liveModels = try await GeminiVisionCoach.listModels(apiKey: key, method: "bidiGenerateContent")
-      coachModels = try await GeminiVisionCoach.listModels(apiKey: key)
-        .filter { $0.contains("flash") || $0.contains("pro") }
-      modelsError = nil
-    } catch {
-      modelsError = String(localized: "Models unavailable: \(error.localizedDescription)")
-    }
-  }
-
-  /// The list with the current choice (and the default) always present.
-  private static func withCurrent(_ list: [String], _ current: String, default fallback: String?) -> [String] {
-    var result = list
-    for item in [fallback, current].compactMap({ $0 }) where !item.isEmpty && !result.contains(item) {
-      result.insert(item, at: 0)
-    }
-    return result
   }
 }
 
@@ -295,21 +165,43 @@ struct HardwareTestView: View {
   }
 }
 
-/// What Genio heard, said and ran into, newest first. "Copy" puts it all on
-/// the clipboard, ready to paste into a bug report.
+/// What Genio heard, said and ran into, newest first, with the live
+/// session's numbers on top. "Copy" puts it all on the clipboard, ready to
+/// paste into a bug report.
 struct LogView: View {
   @ObservedObject var genio: GenioController
+  @ObservedObject var live: LiveConversationEngine
 
   var body: some View {
     List {
-      if genio.log.isEmpty {
-        Text("Nothing yet: connect the glasses or start GENIO.")
-          .foregroundStyle(.secondary)
+      if genio.active {
+        Section {
+          LabeledContent("Connection") {
+            Text(statusText)
+              .foregroundStyle(statusColor)
+          }
+          LabeledContent("Microphone") {
+            Text(verbatim: genio.audio.route.input)
+              .foregroundStyle(genio.audio.micIsGlasses ? Color.primary : Color.orange)
+          }
+          LabeledContent("Frames sent") {
+            Text("\(live.metrics.framesSent) (dropped \(live.metrics.framesDropped), \(Int(live.metrics.frameLatency * 1000)) ms)")
+          }
+          LabeledContent("Session") {
+            Text("\(Int(live.metrics.connectedSeconds / 60)) min · \(live.metrics.totalTokens) tokens")
+          }
+        }
       }
-      ForEach(Array(genio.log.reversed().enumerated()), id: \.offset) { _, line in
-        Text(verbatim: line)
-          .font(.system(.footnote, design: .monospaced))
-          .textSelection(.enabled)
+      Section {
+        if genio.log.isEmpty {
+          Text("Nothing yet: connect the glasses or start GENIO.")
+            .foregroundStyle(.secondary)
+        }
+        ForEach(Array(genio.log.reversed().enumerated()), id: \.offset) { _, line in
+          Text(verbatim: line)
+            .font(.system(.footnote, design: .monospaced))
+            .textSelection(.enabled)
+        }
       }
     }
     .navigationTitle("Log")
@@ -320,6 +212,25 @@ struct LogView: View {
         }
         .disabled(genio.log.isEmpty)
       }
+    }
+  }
+
+  private var statusText: String {
+    switch live.status {
+    case .off: return String(localized: "Off")
+    case .connecting: return String(localized: "Connecting…")
+    case .live: return String(localized: "Live")
+    case .reconnecting(let attempt): return String(localized: "Reconnecting (\(attempt))…")
+    case .failed(let why): return why
+    }
+  }
+
+  private var statusColor: Color {
+    switch live.status {
+    case .live: return .green
+    case .failed: return .red
+    case .connecting, .reconnecting: return .orange
+    case .off: return .secondary
     }
   }
 }

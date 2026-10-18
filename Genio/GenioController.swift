@@ -7,17 +7,20 @@ import UIKit
 /// Setting keys, shared with the settings screen.
 enum SettingKey {
   static let pressType = "pressType"
-  static let coachInterval = "coachInterval"
-  static let geminiModel = "geminiModel"
   static let geminiVoice = "geminiVoice"
-  /// Frames per second sent to Gemini Live (0.2–1).
-  static let geminiFramesPerSecond = "geminiFramesPerSecond"
   /// The periodic vision coach (a separate Gemini model) on or off.
   static let coachEnabled = "coachEnabled"
-  /// The coach's model; empty: picked automatically.
-  static let coachModel = "coachModel"
-  /// The automatic pick, cached.
+  /// The coach's model, picked automatically and cached.
   static let coachModelResolved = "coachModelResolved"
+}
+
+/// Fixed choices that used to be settings: the defaults are right for
+/// almost everyone, and fewer knobs means fewer ways to break it.
+enum Tuning {
+  /// Frames per second sent to Gemini Live (the API's maximum).
+  static let framesPerSecond = 1.0
+  /// Seconds between two looks of the vision coach.
+  static let coachInterval: TimeInterval = 6
 }
 
 /// GENIO's behaviour:
@@ -47,7 +50,7 @@ final class GenioController: ObservableObject {
   private lazy var coach = CoachEngine(
     engine: taskEngine, glasses: glasses,
     makeCoach: { [unowned self] in await self.visionCoach() },
-    interval: { [unowned self] in self.coachInterval },
+    interval: { Tuning.coachInterval },
     isBusy: { [unowned self] in self.live.isModelSpeaking })
   private var cancellables: Set<AnyCancellable> = []
 
@@ -83,11 +86,6 @@ final class GenioController: ObservableObject {
     if let task = taskEngine.task {
       note("Restored: \(task.goal), step \(task.current + 1) of \(task.steps.count)")
     }
-  }
-
-  private var coachInterval: TimeInterval {
-    let value = defaults.double(forKey: SettingKey.coachInterval)
-    return value > 0 ? value : 6
   }
 
   private var coachEnabled: Bool {
@@ -132,9 +130,9 @@ final class GenioController: ObservableObject {
     if task?.finished == true { taskEngine.clear() }
     let settings = LiveConversationEngine.Settings(
       apiKey: key,
-      model: defaults.string(forKey: SettingKey.geminiModel) ?? LiveConversationEngine.defaultModel,
+      model: LiveConversationEngine.defaultModel,
       voice: defaults.string(forKey: SettingKey.geminiVoice) ?? LiveConversationEngine.defaultVoice,
-      framesPerSecond: defaults.object(forKey: SettingKey.geminiFramesPerSecond) as? Double ?? 1,
+      framesPerSecond: Tuning.framesPerSecond,
       languageName: language.promptName)
     note("GENIO on (\(settings.model))")
     Task {
@@ -204,12 +202,11 @@ final class GenioController: ObservableObject {
     }
   }
 
-  /// The vision coach for this look: the key, and the model from Settings
-  /// or, if none is set, the newest stable "flash" model the key can use.
+  /// The vision coach for this look: the key, and the newest stable "flash"
+  /// model the key can use (looked up once, then cached).
   private func visionCoach() async -> GeminiVisionCoach? {
     guard let key = Keychain.geminiKey, !key.isEmpty else { return nil }
-    var model = defaults.string(forKey: SettingKey.coachModel) ?? ""
-    if model.isEmpty { model = defaults.string(forKey: SettingKey.coachModelResolved) ?? "" }
+    var model = defaults.string(forKey: SettingKey.coachModelResolved) ?? ""
     if model.isEmpty {
       let models = (try? await GeminiVisionCoach.listModels(apiKey: key)) ?? []
       model = GeminiVisionCoach.pickDefault(from: models) ?? GeminiVisionCoach.fallbackModel

@@ -72,7 +72,7 @@ In the app:
 
 1. **Link with Meta AI**: Meta AI opens to approve Genio.
 2. **Connect glasses**: wear them and approve the camera in Meta AI. *Camera* and *Button* turn green.
-3. ⚙️ **Settings → Gemini Live**: paste your Gemini API key. Optionally run **Test audio and camera** to check that iOS uses the glasses' microphone.
+3. ⚙️ **Settings → Gemini**: paste your Gemini API key and pick a voice. Optionally run **Test audio and camera** to check that iOS uses the glasses' microphone.
 4. Press the button on your glasses and say what you're doing.
 
 ## Tests
@@ -103,7 +103,7 @@ There are no fixed commands: talk as you would to a person. These work in Englis
 
 ## Cost
 
-Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); the vision coach adds one small image request every few seconds while a step is in progress. To spend less: lower *Video frames per second*, raise the coach interval, or turn the coach off (Settings). Settings → *Now* shows the session's tokens as Gemini reports them.
+Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); the vision coach adds one small image request every few seconds while a step is in progress. To spend less, turn the vision coach off (Settings). Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
 
 ## Status and caveats
 
@@ -120,7 +120,7 @@ Genio is an early, personal project. Things to know:
 
 ## Privacy
 
-There's no Genio server. Microphone audio, sampled camera frames, transcripts and your task go only to Google's Gemini API while GENIO is on, under Google's terms. The API key is stored in the iPhone keychain. The task is saved on the phone (Application Support). The on-screen *Log* (Settings → Diagnostics) stays on the phone.
+There's no Genio server. Microphone audio, sampled camera frames, transcripts and your task go only to Google's Gemini API while GENIO is on, under Google's terms. The API key is stored in the iPhone keychain. The task is saved on the phone (Application Support). The on-screen *Log* (Settings → Log) stays on the phone.
 
 ## Project layout
 

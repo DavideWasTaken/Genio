@@ -2,8 +2,8 @@
 
 Unit tests cover the task engine, the protocol and the session logic with
 mocks. What follows needs real glasses, a real iPhone and a real network. Run
-it after installing a build; note the result and the Settings → Diagnostics →
-Log for anything that fails.
+it after installing a build; note the result and the Settings → Log for
+anything that fails.
 
 Setup: iPhone on iOS 18+, glasses charged and updated, paired in iOS
 Bluetooth settings **and** linked in Meta AI (Developer Mode on), Gemini API
@@ -21,7 +21,7 @@ key in Settings.
 
 ## 2. Session
 
-- [ ] Press the capture button: chime, status "Live" in Settings → Now, microphone pill green.
+- [ ] Press the capture button: chime, status "Live" in Settings → Log, microphone pill green.
 - [ ] Say "ciao": Genio answers in the chosen Gemini voice, on the glasses.
 - [ ] Transcripts of you and Genio appear on the main screen.
 - [ ] Talk over Genio while it speaks: it stops at once (barge-in) and listens.
@@ -54,10 +54,9 @@ key in Settings.
 
 ## 5. Settings
 
-- [ ] Change voice, model, frames per second: applied at the next start.
+- [ ] Change the voice and the voice language: applied at the next start.
 - [ ] Coach off: steps still advance on "fatto" and on Gemini's own looks; the Log shows no coach lines.
-- [ ] Coach interval 3 s and 20 s: the Log shows looks at that pace.
-- [ ] Settings → Now: frames sent grow by about the chosen rate; tokens grow.
+- [ ] Settings → Log while GENIO is on: frames sent grow by about one a second; tokens grow.
 
 ## Known risks to watch
 
