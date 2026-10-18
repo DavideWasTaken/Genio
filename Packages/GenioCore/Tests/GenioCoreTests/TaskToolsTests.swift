@@ -131,6 +131,33 @@ final class TaskToolsTests: XCTestCase {
     XCTAssertEqual(unknown["status"], .string("refused"))
   }
 
+  func testCameraTools() {
+    var cameraOn = false
+    var requests: [Bool] = []
+    tools.cameraIsOn = { cameraOn }
+    tools.onCameraRequest = { on in requests.append(on); cameraOn = on; return true }
+    XCTAssertEqual(call(.turnOnCamera, ["reason": "guardare il filtro"])["camera"], .string("starting"))
+    XCTAssertEqual(call(.turnOnCamera, ["reason": "ancora"])["camera"], .string("on"), "already on: no second request")
+    XCTAssertEqual(requests, [true])
+    plan()
+    XCTAssertEqual(call(.turnOffCamera)["status"], .string("refused"), "the coach needs it during a task")
+    XCTAssertTrue(cameraOn)
+    heard = "nuovo compito"
+    _ = call(.startNewTask, ["user_words": "nuovo compito"])
+    XCTAssertEqual(call(.turnOffCamera)["camera"], .string("off"))
+    XCTAssertFalse(cameraOn)
+    tools.onCameraRequest = { _ in false }
+    XCTAssertEqual(call(.turnOnCamera, ["reason": "x"])["status"], .string("refused"), "glasses not connected")
+  }
+
+  func testAPlanTurnsTheCameraOn() {
+    var cameraOn = false
+    tools.cameraIsOn = { cameraOn }
+    tools.onCameraRequest = { on in cameraOn = on; return true }
+    plan()
+    XCTAssertTrue(cameraOn)
+  }
+
   func testHeardMatching() {
     XCTAssertTrue(TaskTools.saidRecently("Fatto!", in: "ok... FATTO"))
     XCTAssertTrue(TaskTools.saidRecently("torna indietro", in: "torna un attimo indietro"))

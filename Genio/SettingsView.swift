@@ -143,7 +143,7 @@ struct HardwareTestView: View {
       } header: {
         Text("Camera")
       } footer: {
-        Text("The camera runs only while GENIO is on or this page is open, to save the glasses' battery.")
+        Text("The camera turns on only when Genio needs to see, or while this page is open, to save the glasses' battery.")
       }
     }
     .navigationTitle("Test audio and camera")

@@ -19,6 +19,8 @@ public final class TaskTools {
     case goBackStep = "go_back_step"
     case startNewTask = "start_new_task"
     case pauseGuidance = "pause_guidance"
+    case turnOnCamera = "turn_on_camera"
+    case turnOffCamera = "turn_off_camera"
   }
 
   public let engine: TaskEngine
@@ -29,6 +31,11 @@ public final class TaskTools {
   public var onPauseRequested: (() -> Void)?
   /// A remark the engine let through: shown in the log.
   public var onRemark: ((String, RemarkKind) -> Void)?
+  /// Turns the glasses camera on (true) or off (false); returns false if it
+  /// cannot (glasses not connected). The camera starts off in a session.
+  public var onCameraRequest: ((Bool) -> Bool)?
+  /// Whether the camera is streaming now.
+  public var cameraIsOn: () -> Bool = { false }
 
   public init(engine: TaskEngine) {
     self.engine = engine
@@ -100,6 +107,15 @@ public final class TaskTools {
         parameters: .object(properties: [("user_words", userWords)], required: ["user_words"]),
         behavior: .blocking),
       FunctionDeclaration(
+        name: Name.turnOnCamera.rawValue,
+        description: "Turns the glasses camera on. It is off when a session starts. Call it as soon as you need to see: a practical task, \"look at this\", \"is this right?\", \"what do you see?\". It takes a second or two: meanwhile tell the user briefly that you are turning it on (\"Accendo la fotocamera\"), then look. Never describe what you see while it is off.",
+        parameters: .object(properties: [("reason", .string(description: "Why you need to see."))], required: ["reason"]),
+        behavior: .blocking),
+      FunctionDeclaration(
+        name: Name.turnOffCamera.rawValue,
+        description: "Turns the glasses camera off when the practical part is over and the conversation no longer needs it, to save battery. A task in progress keeps it on.",
+        parameters: nil, behavior: .blocking),
+      FunctionDeclaration(
         name: Name.pauseGuidance.rawValue,
         description: "The user asked Genio to stop or pause (\"Genio stop\", \"basta\", \"pausa\"). The task is kept for later. Say a short goodbye.",
         parameters: .object(properties: [("user_words", userWords)], required: ["user_words"]),
@@ -127,6 +143,8 @@ public final class TaskTools {
         engine.pause()
         onPauseRequested?()
       }
+    case .turnOnCamera: result = camera(on: true)
+    case .turnOffCamera: result = camera(on: false)
     case nil: result = refused("unknown function \(call.name)")
     }
     return FunctionResponse(id: call.id, name: call.name, response: .object(result))
@@ -150,7 +168,10 @@ public final class TaskTools {
     }
     switch engine.startTask(goal: goal, steps: steps, strict: true) {
     case .success(let task):
+      // The coach checks the steps through the camera.
+      let cameraOn = cameraIsOn() || onCameraRequest?(true) == true
       return accepted([
+        "camera": .string(cameraOn ? "on" : "unavailable"),
         "current_step": .number(1),
         "total_steps": .number(Double(task.steps.count)),
         "step_text": .string(task.steps[0]),
@@ -159,6 +180,24 @@ public final class TaskTools {
     case .failure(let error):
       return refused(error.description)
     }
+  }
+
+  private func camera(on: Bool) -> [String: JSONValue] {
+    if on {
+      if cameraIsOn() {
+        return accepted(["camera": .string("on"), "instruction": .string("The camera is already on: look.")])
+      }
+      guard onCameraRequest?(true) == true else {
+        return refused("the camera is not available (glasses not connected). Tell the user.")
+      }
+      return accepted(["camera": .string("starting"),
+                       "instruction": .string("The camera is starting; frames arrive in a second or two. Tell the user briefly you are turning it on, then look.")])
+    }
+    if let task = engine.task, !task.finished, !engine.paused {
+      return refused("a task is in progress and the coach needs the camera. Keep it on until the task ends.")
+    }
+    _ = onCameraRequest?(false)
+    return accepted(["camera": .string("off")])
   }
 
   private func revise(_ args: JSONValue) -> [String: JSONValue] {

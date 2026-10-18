@@ -681,12 +681,12 @@
         }
       }
     },
-    "The camera runs only while GENIO is on or this page is open, to save the glasses' battery.": {
+    "The camera turns on only when Genio needs to see, or while this page is open, to save the glasses' battery.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La fotocamera resta accesa solo con GENIO attivo o con questa pagina aperta, per risparmiare la batteria degli occhiali."
+            "value": "La fotocamera si accende solo quando Genio deve vedere, o con questa pagina aperta, per risparmiare la batteria degli occhiali."
           }
         }
       }

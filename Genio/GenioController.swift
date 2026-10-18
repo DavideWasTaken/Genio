@@ -68,6 +68,13 @@ final class GenioController: ObservableObject {
     audio.onLog = { [weak self] line in self?.note(line) }
     live.onLog = { [weak self] line in self?.note(line) }
     live.onPauseRequested = { [weak self] in self?.pauseRequestedByLive() }
+    // The camera starts off; Gemini turns it on when it needs to see.
+    live.cameraControl = { [weak self] on in
+      guard let self, self.active, self.glasses.status == .connected else { return false }
+      self.note("Camera \(on ? "on" : "off") (asked by Gemini)")
+      self.glasses.setCamera(needed: on, by: "genio")
+      return true
+    }
     call.onLog = { [weak self] line in self?.note(line) }
     // The user hung up from the Dynamic Island or the lock screen.
     call.onEndedBySystem = { [weak self] in self?.stop() }
@@ -129,7 +136,6 @@ final class GenioController: ObservableObject {
     }
     active = true
     UIApplication.shared.isIdleTimerDisabled = true
-    glasses.setCamera(needed: true, by: "genio")
     taskEngine.resume()
     if task?.finished == true { taskEngine.clear() }
     let settings = LiveConversationEngine.Settings(
@@ -209,6 +215,13 @@ final class GenioController: ObservableObject {
   private func taskChanged(_ event: TaskEvent) {
     guard active else { return }
     live.taskEventOccurred(event)
+    switch event {
+    case .finished, .cleared:
+      // Nothing left to check: the camera goes off until Gemini needs it.
+      glasses.setCamera(needed: false, by: "genio")
+    default:
+      break
+    }
     updateCoach()
   }
 

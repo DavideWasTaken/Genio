@@ -94,9 +94,13 @@ final class LiveConversationEngine: ObservableObject {
     self.engine = engine
     tools = TaskTools(engine: engine)
     tools.recentUserSpeech = { [weak self] in self?.recentSpeech() ?? "" }
+    tools.cameraIsOn = { [weak glasses] in glasses?.cameraActive ?? false }
+    tools.onCameraRequest = { [weak self] on in self?.cameraControl?(on) ?? false }
   }
 
   var isActive: Bool { session != nil }
+  /// Turns the glasses camera on or off for Gemini; false if it cannot.
+  var cameraControl: ((Bool) -> Bool)?
   /// The user asked to pause (pause_guidance): the controller switches GENIO off.
   var onPauseRequested: (() -> Void)? {
     get { tools.onPauseRequested }

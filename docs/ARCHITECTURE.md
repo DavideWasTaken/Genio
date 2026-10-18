@@ -36,6 +36,7 @@ Models propose, the engine decides. Gemini can call:
 
 | Function | What the engine checks |
 | --- | --- |
+| `turn_on_camera`, `turn_off_camera` | the camera is off at the start; off is refused while a task is in progress |
 | `get_task_state` | — (returns goal, steps with status, notes, recent observations and remarks) |
 | `create_task_plan` | goal not empty, 3–12 steps, each short; refuses to replace a task in progress unless `replace_current` |
 | `propose_plan_revision` | must start at the current step (completed steps are history, skipping is impossible); total ≤ 12 |
@@ -106,10 +107,14 @@ the system instruction and a `[Genio]` recovery message carry the task again.
 
 ## Video
 
-The DAT camera streams 504×896 at 7 fps, but only while GENIO is on or the
-camera test is open: when the glasses connect it runs just long enough to
-deliver a first frame (the button is attached after it), then pauses, so idle
-glasses keep only the button and save battery. Only the newest frame is kept.
+The DAT camera streams 504×896 at 7 fps, and only when needed. A session
+starts with the camera off; Gemini turns it on with `turn_on_camera` when the
+user asks for something practical (it says "Accendo la fotocamera" to cover
+the start-up second), `create_task_plan` turns it on for the coach, and it goes
+off when the task ends or with `turn_off_camera` (refused while a task is in
+progress). The camera test turns it on while its page is open. When the
+glasses connect it runs just long enough to deliver a first frame (the button
+is attached after it). Only the newest frame is kept.
 `FramePacer` takes at most one frame per interval (≤ 1 fps), only if it is
 fresher than 1.5 s, and only when the previous one has finished encoding and
 sending (no queue: a slow network drops frames instead of sending old ones).
