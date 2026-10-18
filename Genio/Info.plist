@@ -78,7 +78,7 @@
 		<string>_bonjour._tcp</string>
 	</array>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Only needed if you pick the "Call" audio route for Genio's voice in the glasses.</string>
+	<string>Genio hears you through your glasses' microphone and talks with you through Gemini.</string>
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsLocalNetworking</key>

@@ -1,8 +1,10 @@
 import AVFoundation
 
-/// Genio's voice: Italian speech synthesis plus two short chimes (on / off),
-/// played through whatever audio route iOS picks -- the glasses' speakers
-/// when they are connected as Bluetooth audio.
+/// Genio's classic voice: iOS speech synthesis plus two short chimes (on /
+/// off), played through whatever audio route iOS picks -- the glasses'
+/// speakers when they are connected as Bluetooth audio. In Gemini Live mode
+/// Gemini speaks instead and only the chimes are used. The audio session and
+/// engine belong to AudioManager.
 @MainActor
 final class Voice: NSObject, AVSpeechSynthesizerDelegate {
   enum Route: String, CaseIterable, Identifiable {
@@ -30,9 +32,7 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
   }
 
   private let synthesizer = AVSpeechSynthesizer()
-  private let engine = AVAudioEngine()
-  private let tonePlayer = AVAudioPlayerNode()
-  private let toneFormat = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1)!
+  private let audio: AudioManager
   private var waiting: [ObjectIdentifier: CheckedContinuation<Void, Never>] = [:]
 
   /// True while the synthesizer is actually talking. Read from the
@@ -40,24 +40,14 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
   /// stuck "speaking" (and deaf) forever.
   var isSpeaking: Bool { synthesizer.isSpeaking }
 
-  override init() {
+  init(audio: AudioManager) {
+    self.audio = audio
     super.init()
     synthesizer.delegate = self
   }
 
   func configure(route: Route) {
-    let session = AVAudioSession.sharedInstance()
-    do {
-      switch route {
-      case .media:
-        try session.setCategory(.playback, mode: .spokenAudio, options: [.duckOthers])
-      case .call:
-        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP, .duckOthers])
-      }
-      try session.setActive(true)
-    } catch {
-      NSLog("[Voice] audio session: %@", error.localizedDescription)
-    }
+    audio.configureClassic(route: route)
   }
 
   /// Speaks `text` and returns when it has been said (or interrupted).
@@ -86,19 +76,14 @@ final class Voice: NSObject, AVSpeechSynthesizerDelegate {
   }
 
   func chime(_ chime: Chime) {
-    if tonePlayer.engine == nil {
-      engine.attach(tonePlayer)
-      engine.connect(tonePlayer, to: engine.mainMixerNode, format: toneFormat)
-    }
-    do {
-      if !engine.isRunning { try engine.start() }
-    } catch {
-      NSLog("[Voice] tone engine: %@", error.localizedDescription)
-      return
-    }
-    guard let buffer = Self.tones(chime.notes, format: toneFormat) else { return }
-    tonePlayer.scheduleBuffer(buffer)
-    tonePlayer.play()
+    guard let buffer = Self.chimeBuffer(chime) else { return }
+    audio.playChime(buffer)
+  }
+
+  /// The chime as 44.1 kHz mono audio.
+  static func chimeBuffer(_ chime: Chime) -> AVAudioPCMBuffer? {
+    guard let format = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1) else { return nil }
+    return tones(chime.notes, format: format)
   }
 
   private func finished(_ id: ObjectIdentifier) {

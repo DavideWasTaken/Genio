@@ -9,6 +9,9 @@ packages:
   MWDAT:
     url: https://github.com/facebook/meta-wearables-dat-ios
     exactVersion: 1.0.1
+  # Task engine, Gemini Live protocol and session (tested with `swift test`).
+  GenioCore:
+    path: Packages/GenioCore
 targets:
   Genio:
     type: application
@@ -35,5 +38,4 @@ targets:
         product: MWDATCamera
       - package: MWDAT
         product: MWDATInputs
-      - package: MWDAT
-        product: MWDATSpeech
+      - package: GenioCore

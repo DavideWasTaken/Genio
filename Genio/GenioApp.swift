@@ -15,7 +15,7 @@ struct GenioApp: App {
 
   var body: some Scene {
     WindowGroup {
-      ContentView(genio: genio, glasses: genio.glasses)
+      ContentView(genio: genio, glasses: genio.glasses, live: genio.live)
         // Meta AI calls back here after registration and permission grants.
         // Only its own links go to the SDK.
         .onOpenURL { url in

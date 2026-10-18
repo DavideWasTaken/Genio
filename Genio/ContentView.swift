@@ -1,11 +1,21 @@
+import GenioCore
 import SwiftUI
 
 struct ContentView: View {
   @ObservedObject var genio: GenioController
-  @ObservedObject var glasses: Glasses
+  @ObservedObject var glasses: GlassesManager
+  @ObservedObject var live: LiveConversationEngine
+  @Environment(\.scenePhase) private var scenePhase
   @State private var showSettings = false
 
   private var glassesReady: Bool { glasses.status == .streaming }
+
+  private var connecting: Bool {
+    switch live.status {
+    case .connecting, .reconnecting: return true
+    default: return false
+    }
+  }
 
   var body: some View {
     NavigationStack {
@@ -27,18 +37,24 @@ struct ContentView: View {
             .accessibilityLabel(Text("Settings"))
           }
 
-          GenioOrb(active: genio.active, thinking: genio.thinking, available: glassesReady || genio.active) {
+          GenioOrb(active: genio.active, thinking: connecting, available: glassesReady || genio.active) {
             genio.toggle()
           }
           .padding(.top, 4)
 
           Group {
-            if genio.active {
-              Text("Say \"done\", \"repeat\", \"back\" or \"new task\". Start a question with \"Genio\".")
+            if genio.active, case .reconnecting = live.status {
+              Text("Connection lost: reconnecting to Gemini. The task is safe.")
+            } else if genio.active, live.status == .connecting {
+              Text("Connecting to Gemini…")
+            } else if genio.active {
+              Text("Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\", \"stop\".")
             } else if !glassesReady {
               Text("Connect the glasses first: GENIO needs their camera, button and microphone.")
+            } else if (Keychain.geminiKey ?? "").isEmpty {
+              Text("Add your Gemini API key in Settings, then press the button on your glasses.")
             } else {
-              Text("Press the button on your glasses or tap here. For a quick question say \"Genio, …\".")
+              Text("Press the button on your glasses or tap here.")
             }
           }
           .font(.subheadline)
@@ -46,18 +62,26 @@ struct ContentView: View {
           .multilineTextAlignment(.center)
           .padding(.horizontal, 12)
 
-          GlassesCard(glasses: glasses)
+          GlassesCard(glasses: glasses, audio: genio.audio, liveActive: genio.active)
 
           if let task = genio.task {
-            TaskCard(task: task)
+            TaskCard(task: task, paused: genio.taskEngine.paused && !genio.active)
           }
 
-          if !genio.heard.isEmpty {
+          if genio.active, !live.userTranscript.isEmpty || !live.genioTranscript.isEmpty {
             Card {
-              Label("Heard", systemImage: "waveform")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(.secondary)
-              Text(verbatim: "“\(genio.heard)”")
+              if !live.userTranscript.isEmpty {
+                Label("You", systemImage: "waveform")
+                  .font(.footnote.weight(.semibold))
+                  .foregroundStyle(.secondary)
+                Text(verbatim: "“\(live.userTranscript)”")
+              }
+              if !live.genioTranscript.isEmpty {
+                Label("Genio", systemImage: "sparkles")
+                  .font(.footnote.weight(.semibold))
+                  .foregroundStyle(Color.genioViolet)
+                Text(verbatim: live.genioTranscript)
+              }
             }
           }
         }
@@ -65,12 +89,16 @@ struct ContentView: View {
       }
       .background(Color(.systemGroupedBackground).ignoresSafeArea())
       .toolbar(.hidden, for: .navigationBar)
-      // Glasses gone while GENIO is on (folded, out of range): stop it.
+      // Glasses gone while GENIO is on (folded, out of range): stop it. The
+      // task stays saved and resumes with the next press.
       .onChange(of: glasses.status) { _, status in
         if status != .streaming && genio.active { genio.stop() }
       }
+      .onChange(of: scenePhase) { _, phase in
+        genio.appWentToBackground(phase == .background)
+      }
       .sheet(isPresented: $showSettings) {
-        SettingsView(genio: genio, glasses: glasses)
+        SettingsView(genio: genio, glasses: glasses, live: live)
       }
     }
     .tint(Color.genioViolet)
@@ -133,7 +161,10 @@ struct GenioOrb: View {
 }
 
 struct GlassesCard: View {
-  @ObservedObject var glasses: Glasses
+  @ObservedObject var glasses: GlassesManager
+  @ObservedObject var audio: AudioManager
+  /// GENIO is on: the microphone pill shows the real route.
+  let liveActive: Bool
 
   var body: some View {
     Card {
@@ -150,7 +181,12 @@ struct GlassesCard: View {
       HStack(spacing: 8) {
         StatusPill(title: "Camera", systemImage: "camera.fill", isOn: glasses.status == .streaming)
         StatusPill(title: "Button", systemImage: "button.programmable", isOn: glasses.buttonReady)
-        StatusPill(title: "Voice", systemImage: "waveform", isOn: glasses.speechReady)
+        StatusPill(title: "Microphone", systemImage: "mic.fill", isOn: liveActive && audio.micIsGlasses)
+      }
+      if liveActive, !audio.micIsGlasses, audio.mode == .live {
+        Text("Gemini is hearing the phone's microphone, not the glasses: \(audio.route.input)")
+          .font(.footnote)
+          .foregroundStyle(Color.orange)
       }
 
       ForEach(glasses.deviceLines, id: \.self) { line in
@@ -167,9 +203,6 @@ struct GlassesCard: View {
         }
         if glasses.needsGlassesAppUpdate {
           action("Update the glasses software", prominent: false) { await glasses.openGlassesAppUpdate() }
-        }
-        if glasses.status == .streaming && !glasses.speechReady {
-          action("Turn on voice commands", prominent: false) { await glasses.enableVoice() }
         }
         if glasses.status == .streaming || glasses.status == .waitingForGlasses || glasses.status == .connecting {
           Button("Disconnect", role: .destructive) { glasses.disconnect() }
@@ -220,13 +253,23 @@ struct GlassesCard: View {
 
 struct TaskCard: View {
   let task: GenioTask
+  /// Saved and waiting for GENIO to resume it.
+  var paused = false
 
   var body: some View {
     Card {
       VStack(alignment: .leading, spacing: 6) {
         Text(verbatim: task.goal)
           .font(.headline)
-        (task.finished ? Text("Done") : Text("Step \(task.current + 1) of \(task.steps.count)"))
+        Group {
+          if task.finished {
+            Text("Done")
+          } else if paused {
+            Text("Step \(task.current + 1) of \(task.steps.count) · paused, press to resume")
+          } else {
+            Text("Step \(task.current + 1) of \(task.steps.count)")
+          }
+        }
           .font(.subheadline)
           .foregroundStyle(.secondary)
         ProgressView(value: Double(min(task.current, task.steps.count)), total: Double(max(task.steps.count, 1)))

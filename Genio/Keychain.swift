@@ -1,15 +1,15 @@
 import Foundation
 import Security
 
-/// Secrets kept in the iOS Keychain (never in the source code): the Claude
-/// API key and the ChatGPT sign-in tokens.
+/// Secrets kept in the iOS Keychain (never in the source code, the logs or
+/// UserDefaults): the Gemini API key.
 enum Keychain {
-  // Kept from the first version, so an API key already saved still reads back.
+  // The service name is kept from the first version.
   private static let service = "genio.anthropic"
 
-  static var apiKey: String? {
-    get { string("apiKey") }
-    set { set(newValue.map { Data($0.utf8) }, for: "apiKey") }
+  static var geminiKey: String? {
+    get { string("geminiApiKey") }
+    set { set(newValue.map { Data($0.utf8) }, for: "geminiApiKey") }
   }
 
   static func string(_ account: String) -> String? {
