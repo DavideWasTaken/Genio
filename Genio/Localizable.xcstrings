@@ -291,6 +291,16 @@
         }
       }
     },
+    "Gemini API key": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave API di Gemini"
+          }
+        }
+      }
+    },
     "Gemini is hearing the phone's microphone, not the glasses: %@": {
       "localizations": {
         "it": {
@@ -337,6 +347,26 @@
           "stringUnit": {
             "state": "translated",
             "value": "Se la pressione breve scatta anche una foto, scegli doppia o lunga."
+          }
+        }
+      }
+    },
+    "Key missing": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave mancante"
+          }
+        }
+      }
+    },
+    "Key saved": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Chiave salvata"
           }
         }
       }

@@ -20,9 +20,13 @@ struct SettingsView: View {
     NavigationStack {
       Form {
         Section {
-          SecureField(text: $apiKey) { Text(verbatim: "AIza…") }
+          SecureField(text: $apiKey) { Text("Gemini API key") }
             .textInputAutocapitalization(.never)
             .autocorrectionDisabled()
+          Label(LocalizedStringKey(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "Key missing" : "Key saved"),
+                systemImage: apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? "exclamationmark.circle" : "checkmark.circle.fill")
+            .font(.footnote)
+            .foregroundStyle(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? Color.orange : Color.green)
           Picker("Voice", selection: $geminiVoice) {
             ForEach(LiveConversationEngine.voices, id: \.self) { Text(verbatim: $0).tag($0) }
           }
