@@ -25,6 +25,7 @@
 - **A natural conversation.** Genio runs on [Gemini Live](https://ai.google.dev/gemini-api/docs/live-api): it hears you through the glasses' microphone, sees through their camera and answers in its own voice on the glasses' speakers. Interrupt it any time, as you would a person.
 - **Step by step.** Gemini proposes a plan of 3 to 12 short steps; Genio's task engine validates it and guides you one step at a time. Say "done", "back", "new task", or ask "which screw?", "is this right?", "I have a different model": the plan adapts.
 - **It checks your work.** A step moves on when you say so, or when the camera shows it done *consistently*: one look is never enough, so Genio would rather wait a few seconds than skip a step you haven't finished. A separate vision coach (a fast Gemini model) looks every few seconds and points out clear mistakes or hazards, cautiously. Silence is the default.
+- **Google Search built in.** Gemini searches the web when the answer depends on current facts (a match score, opening hours, news) or on the manual and specs of the exact model in front of you.
 - **English and Italian.** The app's screens follow your iPhone's language; the voice language is set in the app.
 - **No server.** The app talks straight to the glasses (Meta Wearables DAT SDK) and to Google's Gemini API. The API key stays in the iPhone's keychain.
 

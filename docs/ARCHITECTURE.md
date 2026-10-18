@@ -69,7 +69,7 @@ authority.
 ## Gemini Live session
 
 - Endpoint: `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=…`
-- Setup: `models/gemini-3.8-live` (configurable), `responseModalities: [AUDIO]`, a prebuilt voice, system instruction with the task, tool declarations, automatic activity detection with `START_OF_ACTIVITY_INTERRUPTS` (barge-in), input and output transcription, `contextWindowCompression.slidingWindow` (without it an audio+video session ends after 2 minutes), `sessionResumption`.
+- Setup: `models/gemini-3.8-live` (configurable), `responseModalities: [AUDIO]`, a prebuilt voice, system instruction with the task, tool declarations, automatic activity detection with `START_OF_ACTIVITY_INTERRUPTS` (barge-in), input and output transcription, the `googleSearch` tool (grounding for current facts and model manuals), `contextWindowCompression.slidingWindow` (without it an audio+video session ends after 2 minutes), `sessionResumption`.
 - Input: `realtimeInput.audio` (16 kHz 16-bit mono PCM, ~64 ms chunks), `realtimeInput.video` (JPEG, ≤ 1 fps, ≤ 768 px), `realtimeInput.text` for app events (`[Genio] …`).
 - Output: `serverContent` audio (24 kHz PCM) played as it arrives; `interrupted` flushes playback at once; transcripts feed the UI and the user-words check; `toolCall` → TaskTools → `toolResponse`.
 - Connections last ~10 minutes: on `goAway` the session reconnects at once with the latest resumable handle. On a drop it retries with backoff (0.5 s, 1 s, 2 s… ≤ 20 s, jitter), up to 8 times; an invalid key (close 1008) is not retried. After 2 failed resumptions it starts fresh and sends the task state (`contextLost`).

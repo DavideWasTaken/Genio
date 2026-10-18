@@ -137,6 +137,9 @@ public struct LiveSetup: Sendable {
   public var tools: [FunctionDeclaration]
   public var resumptionHandle: String?
   public var transcribe = true
+  /// Google Search grounding: current facts (scores, news, opening hours)
+  /// and manuals or specs for the exact model in front of the user.
+  public var googleSearch = true
   public var voiceActivity = VoiceActivitySettings()
   /// Lower tokens per frame: the coach needs shapes, not fine print.
   public var mediaResolution = "MEDIA_RESOLUTION_LOW"
@@ -178,9 +181,10 @@ public enum LiveClientMessage {
       "contextWindowCompression": ["slidingWindow": [String: Any]()],
       "sessionResumption": s.resumptionHandle.map { ["handle": $0] } ?? [String: Any](),
     ]
-    if !s.tools.isEmpty {
-      setup["tools"] = [["functionDeclarations": s.tools.map(\.json)]]
-    }
+    var tools: [[String: Any]] = []
+    if !s.tools.isEmpty { tools.append(["functionDeclarations": s.tools.map(\.json)]) }
+    if s.googleSearch { tools.append(["googleSearch": [String: Any]()]) }
+    if !tools.isEmpty { setup["tools"] = tools }
     if s.transcribe {
       setup["inputAudioTranscription"] = [String: Any]()
       setup["outputAudioTranscription"] = [String: Any]()

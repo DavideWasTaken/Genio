@@ -34,8 +34,10 @@ final class LiveMessagesTests: XCTestCase {
     XCTAssertNotNil(body["outputAudioTranscription"])
     let detection = ((body["realtimeInputConfig"] as? [String: Any])?["automaticActivityDetection"] as? [String: Any])
     XCTAssertEqual(detection?["startOfSpeechSensitivity"] as? String, "START_SENSITIVITY_LOW")
-    let declarations = ((body["tools"] as? [[String: Any]])?.first?["functionDeclarations"] as? [[String: Any]]) ?? []
+    let tools = body["tools"] as? [[String: Any]] ?? []
+    let declarations = (tools.first?["functionDeclarations"] as? [[String: Any]]) ?? []
     XCTAssertEqual(declarations.count, TaskTools.Name.allCases.count)
+    XCTAssertTrue(tools.contains { $0["googleSearch"] != nil }, "Google Search grounding is on")
   }
 
   func testFreshSessionSendsAnEmptyResumptionObject() throws {
@@ -43,7 +45,7 @@ final class LiveMessagesTests: XCTestCase {
     let body = try XCTUnwrap(try json(LiveClientMessage.setup(setup))["setup"] as? [String: Any])
     XCTAssertEqual(body["model"] as? String, "models/gemini-3.8-live")
     XCTAssertEqual((body["sessionResumption"] as? [String: Any])?.isEmpty, true)
-    XCTAssertNil(body["tools"])
+    XCTAssertEqual((body["tools"] as? [[String: Any]])?.count, 1, "only Google Search")
     XCTAssertNil((body["generationConfig"] as? [String: Any])?["speechConfig"])
   }
 
