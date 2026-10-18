@@ -176,6 +176,16 @@ final class AudioManager: ObservableObject {
     }
   }
 
+  /// Before a call: stops the engine and deactivates the current (standby)
+  /// session, so CallKit can set up the microphone session even from the
+  /// background — iOS refuses to turn an active mixable session into a
+  /// non-mixable one there ('!int').
+  func releaseForCall() {
+    resetEngine()
+    try? AVAudioSession.sharedInstance().setActive(false, options: .notifyOthersOnDeactivation)
+    mode = .idle
+  }
+
   func deactivate() {
     stopCapture()
     flushVoice()
@@ -229,8 +239,8 @@ final class AudioManager: ObservableObject {
     // touched: voice processing on an input without a valid format raises
     // an exception that would crash the app.
     let session = AVAudioSession.sharedInstance()
-    guard session.isInputAvailable else {
-      report("No microphone available (route: \(route.input)).")
+    guard session.category == .playAndRecord, session.isInputAvailable, !session.currentRoute.inputs.isEmpty else {
+      report("The audio session has no microphone (category \(session.category.rawValue), input \(route.input)).")
       return false
     }
     let input = engine.inputNode

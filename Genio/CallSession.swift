@@ -98,9 +98,13 @@ extension CallSession: CXProviderDelegate {
   nonisolated func provider(_ provider: CXProvider, perform action: CXStartCallAction) {
     // Configure, never activate: CallKit activates the session itself.
     let session = AVAudioSession.sharedInstance()
-    try? session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
-    try? session.setPreferredSampleRate(16_000)
-    try? session.setPreferredIOBufferDuration(0.02)
+    do {
+      try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
+      try? session.setPreferredSampleRate(16_000)
+      try? session.setPreferredIOBufferDuration(0.02)
+    } catch {
+      MainActor.assumeIsolated { onLog?("Call: audio category not set (\(error.localizedDescription))") }
+    }
     provider.reportOutgoingCall(with: action.callUUID, startedConnectingAt: Date())
     action.fulfill()
     provider.reportOutgoingCall(with: action.callUUID, connectedAt: Date())

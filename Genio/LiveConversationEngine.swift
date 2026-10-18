@@ -119,6 +119,7 @@ final class LiveConversationEngine: ObservableObject {
     // background. If iOS refuses the call, try without (works on screen).
     var audioReady = false
     if await audio.microphoneAllowed() {
+      audio.releaseForCall()
       let inCall = await call.start()
       guard myStart == startGeneration else { return }  // stopped meanwhile
       audioReady = await audio.configureLive(activatedByCall: inCall)
