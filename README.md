@@ -50,7 +50,7 @@ flowchart LR
 - **TaskEngine** (in `Packages/GenioCore`): plans, steps, completion checks, observations and memory. Gemini and the coach only *propose*; the engine validates every proposal and is the only one that changes the task. It is saved to disk after every change.
 - **CoachEngine**: the periodic vision coach, separate from the conversation, on its own Gemini model.
 
-More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+More in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md). Next on the roadmap: a bridge to Claude Code and Codex on your computer, designed in [docs/BRIDGE-DESIGN.md](docs/BRIDGE-DESIGN.md).
 
 ## Requirements
 
