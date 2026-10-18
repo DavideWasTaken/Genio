@@ -268,7 +268,7 @@ struct HardwareTestView: View {
             .font(.footnote)
             .foregroundStyle(age < 2 ? Color.secondary : Color.orange)
         } else {
-          Text(glasses.status == .streaming ? "No frame yet." : "Connect the glasses first.")
+          (glasses.status == .streaming ? Text("No frame yet.") : Text("Connect the glasses first."))
             .foregroundStyle(.secondary)
         }
         Button("Take a frame") { frame = glasses.latestImage() }

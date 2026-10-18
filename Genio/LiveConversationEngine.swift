@@ -73,6 +73,9 @@ final class LiveConversationEngine: ObservableObject {
   /// The task revision Gemini last saw (to resync after a reconnect).
   private var syncedRevision: Int?
   private var videoPaused = false
+  /// Bumped by stop(): a start() still waiting (microphone permission,
+  /// audio setup) sees it changed and gives up.
+  private var startGeneration = 0
 
   init(audio: AudioManager, glasses: GlassesManager, engine: TaskEngine) {
     self.audio = audio
@@ -97,11 +100,15 @@ final class LiveConversationEngine: ObservableObject {
       status = .failed(String(localized: "The Gemini API key is missing (Settings)."))
       return
     }
+    startGeneration += 1
+    let myStart = startGeneration
     status = .connecting
     let (stream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingNewest(64))
     micContinuation = continuation
     audio.onMicrophonePCM = { pcm in continuation.yield(pcm) }
-    guard await audio.configureLive() else {
+    let audioReady = await audio.configureLive()
+    guard myStart == startGeneration else { return }  // stopped meanwhile
+    guard audioReady else {
       status = .failed(audio.lastError ?? String(localized: "The microphone could not start."))
       cleanUp()
       return
@@ -145,12 +152,13 @@ final class LiveConversationEngine: ObservableObject {
   }
 
   func stop() {
-    guard let session else { return }
-    let closing = session
-    Task { await closing.stop() }
+    startGeneration += 1
+    if let session {
+      Task { await session.stop() }
+      onLog?("Gemini Live: off")
+    }
     cleanUp()
     status = .off
-    onLog?("Gemini Live: off")
   }
 
   /// Video only while it helps: paused in the background or on demand.

@@ -1,6 +1,16 @@
 {
   "sourceLanguage": "en",
   "strings": {
+    "%lld (dropped %lld, %lld ms)": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%lld (scartati %lld, %lld ms)"
+          }
+        }
+      }
+    },
     "%lld lines": {
       "localizations": {
         "it": {
@@ -11,22 +21,32 @@
         }
       }
     },
-    "API key missing": {
+    "%lld min · %lld tokens": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "chiave API mancante"
+            "value": "%lld min · %lld token"
           }
         }
       }
     },
-    "API key set": {
+    "A Gemini API key from aistudio.google.com. It stays in this iPhone's keychain. Changes apply the next time GENIO starts. Fewer frames per second use fewer tokens; the coach still looks every few seconds.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "chiave API impostata"
+            "value": "Una chiave API di Gemini da aistudio.google.com. Resta nel portachiavi di questo iPhone. Le modifiche valgono dal prossimo avvio di GENIO. Meno fotogrammi al secondo consumano meno token; il coach guarda comunque ogni pochi secondi."
+          }
+        }
+      }
+    },
+    "A second, fast Gemini model looks at the camera every few seconds to check the step and spot mistakes, besides the conversation. A step moves on only after consistent evidence. Off: only the conversation checks, with fewer calls. Genio is not a safety device.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Un secondo modello Gemini, veloce, guarda la fotocamera ogni pochi secondi per controllare il passo e notare errori, oltre alla conversazione. Un passo avanza solo con prove coerenti. Spento: controlla solo la conversazione, con meno chiamate. Genio non è un dispositivo di sicurezza."
           }
         }
       }
@@ -41,22 +61,22 @@
         }
       }
     },
-    "Access denied on ChatGPT.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accesso negato su ChatGPT."
-          }
-        }
-      }
-    },
     "Account": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Account"
+          }
+        }
+      }
+    },
+    "Add your Gemini API key in Settings, then press the button on your glasses.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Aggiungi la chiave API di Gemini nelle impostazioni, poi premi il pulsante sugli occhiali."
           }
         }
       }
@@ -161,66 +181,6 @@
         }
       }
     },
-    "ChatGPT (plan)": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ChatGPT (piano)"
-          }
-        }
-      }
-    },
-    "ChatGPT models": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modelli ChatGPT"
-          }
-        }
-      }
-    },
-    "ChatGPT plan usage limit reached.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Limite d'uso del piano ChatGPT raggiunto."
-          }
-        }
-      }
-    },
-    "ChatGPT sign-in error: %@": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Errore di accesso a ChatGPT: %@"
-          }
-        }
-      }
-    },
-    "Claude (API key)": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude (chiave API)"
-          }
-        }
-      }
-    },
-    "Claude with an API key: pay as you go, a few cents an hour.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claude con la chiave API: paghi a consumo, pochi centesimi l'ora."
-          }
-        }
-      }
-    },
     "Coach": {
       "localizations": {
         "it": {
@@ -231,12 +191,12 @@
         }
       }
     },
-    "Coach and glasses": {
+    "Coach model": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Coach e occhiali"
+            "value": "Modello del coach"
           }
         }
       }
@@ -247,6 +207,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Connetti occhiali"
+          }
+        }
+      }
+    },
+    "Connect the glasses first.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Collega prima gli occhiali."
           }
         }
       }
@@ -271,12 +241,42 @@
         }
       }
     },
+    "Connecting to Gemini…": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Mi collego a Gemini…"
+          }
+        }
+      }
+    },
     "Connecting…": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Connessione…"
+          }
+        }
+      }
+    },
+    "Connection": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connessione"
+          }
+        }
+      }
+    },
+    "Connection lost: reconnecting to Gemini. The task is safe.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Connessione persa: mi ricollego a Gemini. Il compito è al sicuro."
           }
         }
       }
@@ -321,16 +321,6 @@
         }
       }
     },
-    "Done.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Fatto."
-          }
-        }
-      }
-    },
     "Double press": {
       "localizations": {
         "it": {
@@ -341,12 +331,22 @@
         }
       }
     },
-    "From console.anthropic.com. It stays in this iPhone's keychain.": {
+    "Frame from %.1f s ago": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Da console.anthropic.com. Resta nel portachiavi di questo iPhone."
+            "value": "Fotogramma di %.1f s fa"
+          }
+        }
+      }
+    },
+    "Frames sent": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fotogrammi inviati"
           }
         }
       }
@@ -367,6 +367,36 @@
           "stringUnit": {
             "state": "translated",
             "value": "GENIO: prima connetti gli occhiali"
+          }
+        }
+      }
+    },
+    "Gemini Live": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemini Live"
+          }
+        }
+      }
+    },
+    "Gemini is hearing the phone's microphone, not the glasses: %@": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gemini sente il microfono del telefono, non quello degli occhiali: %@"
+          }
+        }
+      }
+    },
+    "Genio": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genio"
           }
         }
       }
@@ -397,36 +427,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ho sentito"
-          }
-        }
-      }
-    },
-    "If the main one can't answer (credit or plan limit used up, sign-in expired, service down), Genio asks the other one, when it is set up below.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se il principale non può rispondere (credito o limite del piano finiti, accesso scaduto, servizio non disponibile), Genio chiede all'altro, se è configurato qui sotto."
-          }
-        }
-      }
-    },
-    "Invalid identity token.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Token di identità non valido."
-          }
-        }
-      }
-    },
-    "Invalid sign-in response (state).": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Risposta di accesso non valida (state)."
           }
         }
       }
@@ -471,12 +471,12 @@
         }
       }
     },
-    "Local sign-in server: %@": {
+    "Live": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Server locale per l'accesso: %@"
+            "value": "Attivo"
           }
         }
       }
@@ -551,12 +551,12 @@
         }
       }
     },
-    "Model and accounts": {
+    "Microphone": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Modello e account"
+            "value": "Microfono"
           }
         }
       }
@@ -567,6 +567,16 @@
           "stringUnit": {
             "state": "translated",
             "value": "Modelli non disponibili: %@"
+          }
+        }
+      }
+    },
+    "No frame yet.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ancora nessun fotogramma."
           }
         }
       }
@@ -591,52 +601,62 @@
         }
       }
     },
-    "Pick a fast model for the coach: it looks every few seconds.": {
+    "Now": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Per il coach scegli un modello veloce: guarda ogni pochi secondi."
+            "value": "Adesso"
           }
         }
       }
     },
-    "Plus has a usage limit every 5 hours, shared with the other apps using your plan; Pro does not.": {
+    "Off": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Con Plus c'è un limite d'uso ogni 5 ore, condiviso con le altre app che usano il tuo piano; con Pro no."
+            "value": "Spento"
           }
         }
       }
     },
-    "Press the button on your glasses or tap here. For a quick question say \"Genio, …\".": {
+    "Press the button on your glasses or tap here.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Premi il tasto sugli occhiali o tocca qui. Per una domanda al volo dì \"Genio, …\"."
+            "value": "Premi il pulsante sugli occhiali o tocca qui."
           }
         }
       }
     },
-    "Questions and plans": {
+    "Realtime model": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Domande e piani"
+            "value": "Modello in tempo reale"
           }
         }
       }
     },
-    "Say \"done\", \"repeat\", \"back\" or \"new task\". Start a question with \"Genio\".": {
+    "Reconnecting (%lld)…": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dì \"fatto\", \"ripeti\", \"indietro\" o \"nuovo compito\". Per una domanda inizia con \"Genio\"."
+            "value": "Riconnessione (%lld)…"
+          }
+        }
+      }
+    },
+    "Session": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sessione"
           }
         }
       }
@@ -671,56 +691,6 @@
         }
       }
     },
-    "Sign in with ChatGPT": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accedi con ChatGPT"
-          }
-        }
-      }
-    },
-    "Sign in with ChatGPT in Settings.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accedi con ChatGPT nelle impostazioni."
-          }
-        }
-      }
-    },
-    "Sign out of ChatGPT": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Esci da ChatGPT"
-          }
-        }
-      }
-    },
-    "Sign-in cancelled.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Accesso annullato."
-          }
-        }
-      }
-    },
-    "Sign-in took too long: nothing came back from OpenAI. See Settings → Diagnostics → Log.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "L'accesso ci ha messo troppo: da OpenAI non è tornato nulla. Guarda Impostazioni → Diagnostica → Registro."
-          }
-        }
-      }
-    },
     "Source code on GitHub": {
       "localizations": {
         "it": {
@@ -731,12 +701,42 @@
         }
       }
     },
+    "Speak: the bar should move. You should hear a chime on the glasses. This uses the same two-way Bluetooth audio as Gemini Live.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parla: la barra deve muoversi. Dovresti sentire un suono negli occhiali. Usa lo stesso audio Bluetooth bidirezionale di Gemini Live."
+          }
+        }
+      }
+    },
+    "Speaker": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Altoparlante"
+          }
+        }
+      }
+    },
     "Start GENIO": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Avvia GENIO"
+          }
+        }
+      }
+    },
+    "Start the audio test": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Avvia la prova audio"
           }
         }
       }
@@ -761,12 +761,72 @@
         }
       }
     },
-    "The Claude API key is missing (Settings).": {
+    "Step %lld of %lld · paused, press to resume": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Manca la chiave API di Claude (Impostazioni)."
+            "value": "Passo %lld di %lld · in pausa, premi per riprendere"
+          }
+        }
+      }
+    },
+    "Stop the audio test": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ferma la prova audio"
+          }
+        }
+      }
+    },
+    "Switch GENIO off to run the tests.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Spegni GENIO per fare le prove."
+          }
+        }
+      }
+    },
+    "Take a frame": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Scatta un fotogramma"
+          }
+        }
+      }
+    },
+    "Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\", \"stop\".": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Parla normalmente: di' cosa stai facendo, chiedi quello che vuoi. \"Fatto\", \"indietro\", \"nuovo compito\", \"stop\"."
+          }
+        }
+      }
+    },
+    "Test audio and camera": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prova audio e fotocamera"
+          }
+        }
+      }
+    },
+    "The Gemini API key is missing (Settings).": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Manca la chiave API di Gemini (Impostazioni)."
           }
         }
       }
@@ -801,52 +861,42 @@
         }
       }
     },
-    "The model declined the request.": {
+    "The microphone could not start.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Il modello ha rifiutato la richiesta."
+            "value": "Il microfono non è partito."
           }
         }
       }
     },
-    "The model's answer was not valid.": {
+    "The microphone is not the glasses: check that they are connected as Bluetooth audio in iOS Settings.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La risposta del modello non è valida."
+            "value": "Il microfono non è quello degli occhiali: controlla che siano collegati come audio Bluetooth nelle Impostazioni di iOS."
           }
         }
       }
     },
-    "The more often the coach looks, the quicker it reacts and the more it uses. If Genio's voice comes out of the phone instead of the glasses, try the \"Call\" audio.": {
+    "The voice language is what Genio speaks and answers in. The app's screens follow the iPhone's language; to change them for Genio only, open App language.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Più spesso il coach guarda, più è reattivo e più consuma. Se la voce di Genio esce dal telefono invece che dagli occhiali, prova l'audio \"Chiamata\"."
+            "value": "La lingua della voce è quella in cui Genio parla e risponde. Le schermate dell'app seguono la lingua dell'iPhone; per cambiarle solo per Genio, apri Lingua dell'app."
           }
         }
       }
     },
-    "The voice language is what Genio speaks, understands (\"done\", \"repeat\"…) and answers in. The app's screens follow the iPhone's language; to change them for Genio only, open App language.": {
+    "Tokens as reported by Gemini for this session. Prices: ai.google.dev/pricing.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "La lingua della voce è quella in cui Genio parla, capisce i comandi (\"fatto\", \"ripeti\"…) e risponde. Le schermate seguono la lingua dell'iPhone; per cambiarla solo per Genio apri Lingua dell'app."
-          }
-        }
-      }
-    },
-    "Turn on voice commands": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Attiva comandi vocali"
+            "value": "Token indicati da Gemini per questa sessione. Prezzi: ai.google.dev/pricing."
           }
         }
       }
@@ -861,32 +911,32 @@
         }
       }
     },
-    "Use the other as backup": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usa l'altro come riserva"
-          }
-        }
-      }
-    },
-    "Uses your ChatGPT Plus/Pro plan instead of API credit.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Usa il tuo piano ChatGPT Plus/Pro invece del credito API."
-          }
-        }
-      }
-    },
     "Version": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Versione"
+          }
+        }
+      }
+    },
+    "Video: %.1f frames per second": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Video: %.1f fotogrammi al secondo"
+          }
+        }
+      }
+    },
+    "Vision coach": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Coach visivo"
           }
         }
       }
@@ -921,22 +971,12 @@
         }
       }
     },
-    "You can go back to Genio.": {
+    "You": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Puoi tornare a Genio."
-          }
-        }
-      }
-    },
-    "Your ChatGPT plan does not allow use from this app.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il tuo piano ChatGPT non consente l'uso da questa app."
+            "value": "Tu"
           }
         }
       }
@@ -981,16 +1021,6 @@
         }
       }
     },
-    "not signed in": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "accesso non effettuato"
-          }
-        }
-      }
-    },
     "on": {
       "localizations": {
         "it": {
@@ -1017,16 +1047,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "pronto"
-          }
-        }
-      }
-    },
-    "signed in": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "accesso effettuato"
           }
         }
       }
