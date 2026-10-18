@@ -42,6 +42,16 @@ flowchart LR
   localhost behind `tailscale serve`), never on 0.0.0.0, never on the
   internet. Tailscale gives encryption and device identity; a Tailscale ACL
   limits the port to the iPhone.
+- **Without Tailscale**, two other ways, the bridge being the same:
+  - *Same network* (home Wi-Fi, or the Mac on the iPhone's hotspot): the
+    bridge listens on the local network with TLS (a self-signed certificate
+    pinned at pairing) and the token. No VPN, nothing exposed outside; needs
+    iOS's Local Network permission. The first mode to build.
+  - *Anywhere, no VPN app*: an outbound tunnel from the Mac (Cloudflare
+    Tunnel with Cloudflare Access, a service token on the phone). No open
+    ports on the router, but the bridge gets a public hostname, so the token
+    and Access policy are what protect it.
+  Never forward a router port to the bridge.
 - **Pairing**: the bridge prints a QR code with its tailnet address and a
   random 256-bit token; the app scans it and stores the token in the Keychain
   (like the Gemini key). Every request carries `Authorization: Bearer`. The
