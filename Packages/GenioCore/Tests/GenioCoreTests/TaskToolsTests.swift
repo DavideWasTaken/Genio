@@ -192,6 +192,36 @@ final class TaskToolsTests: XCTestCase {
     XCTAssertTrue(engine.facts.isEmpty)
   }
 
+  func testStepCheckPolicy() {
+    var policy = StepCheckPolicy(interval: 10, quietAfterSpeech: 4)
+    let t0 = Date()
+    func at(_ s: TimeInterval) -> Date { t0.addingTimeInterval(s) }
+    // No step or no camera: never.
+    XCTAssertFalse(policy.shouldCheck(now: at(0), step: nil, cameraOn: true, lastSpeech: nil))
+    XCTAssertFalse(policy.shouldCheck(now: at(0), step: (0, 1), cameraOn: false, lastSpeech: nil))
+    // A new step starts the clock.
+    XCTAssertFalse(policy.shouldCheck(now: at(0), step: (0, 1), cameraOn: true, lastSpeech: nil))
+    XCTAssertFalse(policy.shouldCheck(now: at(9), step: (0, 1), cameraOn: true, lastSpeech: nil))
+    // Someone spoke 2 s ago: wait.
+    XCTAssertFalse(policy.shouldCheck(now: at(11), step: (0, 1), cameraOn: true, lastSpeech: at(9)))
+    XCTAssertTrue(policy.shouldCheck(now: at(14), step: (0, 1), cameraOn: true, lastSpeech: at(9)))
+    XCTAssertFalse(policy.shouldCheck(now: at(20), step: (0, 1), cameraOn: true, lastSpeech: nil))
+    XCTAssertTrue(policy.shouldCheck(now: at(24), step: (0, 1), cameraOn: true, lastSpeech: nil))
+    // Next step: the clock restarts.
+    XCTAssertFalse(policy.shouldCheck(now: at(25), step: (1, 2), cameraOn: true, lastSpeech: nil))
+    XCTAssertFalse(policy.shouldCheck(now: at(30), step: (1, 2), cameraOn: true, lastSpeech: nil))
+    XCTAssertTrue(policy.shouldCheck(now: at(35), step: (1, 2), cameraOn: true, lastSpeech: nil))
+  }
+
+  func testProactiveMessages() {
+    XCTAssertTrue(LiveInstructions.cameraReady(userRequest: "che vite è questa? ").contains("\"che vite è questa?\""))
+    XCTAssertFalse(LiveInstructions.cameraReady(userRequest: "").contains("they said"))
+    let check = LiveInstructions.stepCheck(step: 2, text: "Togli le viti")
+    XCTAssertTrue(check.hasPrefix("[Genio check]"))
+    XCTAssertTrue(check.contains("propose_step_completion"))
+    XCTAssertTrue(LiveInstructions.system(language: "Italian", snapshot: nil).contains("[Genio check]"))
+  }
+
   func testHeardMatching() {
     XCTAssertTrue(TaskTools.saidRecently("Fatto!", in: "ok... FATTO"))
     XCTAssertTrue(TaskTools.saidRecently("torna indietro", in: "torna un attimo indietro"))

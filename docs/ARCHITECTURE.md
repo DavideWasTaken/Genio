@@ -112,7 +112,11 @@ the system instruction and a `[Genio]` recovery message carry the task again.
 The DAT camera streams 504×896 at 7 fps, and only when needed. A session
 starts with the camera off; Gemini turns it on with `turn_on_camera` when the
 user asks for something practical (it says "Accendo la fotocamera" to cover
-the start-up second), `create_task_plan` turns it on for the coach, and it goes
+the start-up second). Gemini then stops talking: as soon as the first frame
+has been sent, the app tells it (`LiveInstructions.cameraReady`, with the
+user's request) and it answers, so the user never repeats the question; after
+10 s without a frame it is told the camera did not start. `create_task_plan`
+turns the camera on for the coach, and it goes
 off when the task ends or with `turn_off_camera` (refused while a task is in
 progress). The camera test turns it on while its page is open. When the
 glasses connect it runs just long enough to deliver a first frame (the button
@@ -134,6 +138,20 @@ observation for the engine; a remark is relayed to Gemini Live (which says it
 in its own voice) only if the engine allows it: hazards at most every 5 s,
 mistakes every 15 s, never a repeat, never `info`. The coach is always on: it
 is what checks the steps; Gemini Live alone rarely looks unprompted.
+
+## Silent step checks
+
+Gemini Live answers only to input: frames alone never make it speak. So while
+a step is in progress and the camera is on, after 10 s of quiet (nobody spoke
+for 4 s, Genio not speaking), the app sends a `[Genio check]` message: look at
+the latest frames, call `propose_step_completion` if the step is clearly
+done, `report_observation` for a clear mistake, otherwise nothing
+(`StepCheckPolicy`, restarted at every new step). The reply to a check is
+muted: it is played only after a function result that advanced the step or
+allowed a remark, and the mute ends when the user speaks or the app sends
+anything else. The user does not have to say "done": Gemini's looks and the
+coach's count toward the same two-look confirmation, and a confirmed step is
+announced at once.
 
 ## Memory
 

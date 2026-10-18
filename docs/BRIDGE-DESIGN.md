@@ -104,6 +104,18 @@ Events come from the message stream: `system/init` (session id), `assistant`
 text and `tool_use` blocks (progress lines such as "running the tests"),
 `result` (summary, `subtype`, cost estimate, `permission_denials`).
 
+**Which interface.** Two options, both official:
+
+- the `claude` CLI in `-p` mode with `--output-format stream-json`
+  (`--resume <session_id>` to continue): it uses the subscription you are
+  logged in with on the Mac (`claude` → `/login`), the path the headless docs
+  present as normal;
+- the Agent SDK, with a richer permission callback (`canUseTool`).
+
+For a personal bridge the CLI is the default: same login as at the desk, no
+API key. Permission requests then go through a `PreToolUse` hook that asks
+the bridge (and waits for the voice answer) instead of `canUseTool`.
+
 **Authentication.** In `-p`/SDK mode `ANTHROPIC_API_KEY`, when present,
 always wins over the subscription login. The bridge checks
 `claude auth status --json` at startup and refuses to start if the method is
@@ -114,7 +126,24 @@ unclear, so the conservative default is an Anthropic API key in the Mac's
 keychain. Distributing the bridge would need that settled first.
 
 Remote Control is **not** an integration point: only Anthropic's own apps
-can connect to it.
+can connect to it. The bridge offers the same thing for its own sessions
+(below).
+
+## Logins and sessions
+
+- **Logins**: the bridge uses the logins already on the Mac and never stores
+  or copies them: `claude` (subscription, `/login`) and `codex login`
+  (ChatGPT account). `genio-bridge doctor` reports which method each agent
+  will use (`claude auth status --json`, Codex's login status) before any job.
+- **Sessions are ordinary agent sessions.** Claude Code keeps them on the
+  Mac and `claude --resume <id>` opens them in a terminal; Codex threads are
+  resumable with `codex resume`. So a job started from the glasses can be
+  continued at the desk, and a session started at the desk can be continued
+  from the glasses ("riprendi la sessione di ieri sul repo Genio").
+- The bridge keeps a small index (session id, agent, project, title, last
+  summary, time) so Gemini can list and pick sessions by voice:
+  `list_sessions(project?)`, and `follow_up` takes a session as well as a
+  job.
 
 ### Codex: app-server (JSON-RPC)
 

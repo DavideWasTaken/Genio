@@ -260,7 +260,7 @@ public final class TaskTools {
         return refused("the camera is not available (glasses not connected). Tell the user.")
       }
       return accepted(["camera": .string("starting"),
-                       "instruction": .string("The camera is starting; frames arrive in a second or two. Tell the user briefly you are turning it on, then look.")])
+                       "instruction": .string("The camera is starting; frames arrive in a second or two. Say in a few words that you are turning it on, then stop: the app tells you as soon as you can see, and then you answer.")])
     }
     if let task = engine.task, !task.finished, !engine.paused {
       return refused("a task is in progress and the coach needs the camera. Keep it on until the task ends.")

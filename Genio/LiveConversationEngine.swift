@@ -86,6 +86,18 @@ final class LiveConversationEngine: ObservableObject {
   private var userTurnEnded = true
   /// The last start failed because of the microphone (not the network).
   private(set) var lastFailureWasAudio = false
+  /// Gemini turned the camera on: once a frame has been sent it is told to
+  /// answer, instead of waiting for the user to repeat the question.
+  private var cameraFollowUp: (requestedAt: Date, request: String)?
+  /// When the last camera frame went to Gemini.
+  private var lastFrameSent: Date?
+  /// Looks at the current step while the user is quiet.
+  private var stepChecks = StepCheckPolicy()
+  /// A silent check's reply is not played until then, unless a function
+  /// result lets Genio speak (step confirmed, remark worth saying).
+  private var checkMutedUntil: Date?
+  /// When the user or Genio last spoke.
+  private var lastSpeech: Date?
 
   init(audio: AudioManager, call: CallSession, glasses: GlassesManager, engine: TaskEngine) {
     self.audio = audio
@@ -195,16 +207,27 @@ final class LiveConversationEngine: ObservableObject {
   /// A task change made by the app (the coach confirmed a step): Gemini
   /// announces it. Changes Gemini made itself are skipped.
   func taskEventOccurred(_ event: TaskEvent) {
-    guard !inToolCall, let session, let text = LiveInstructions.stepEvent(event) else { return }
+    guard !inToolCall, session != nil, let text = LiveInstructions.stepEvent(event) else { return }
     syncedRevision = engine.task?.revision
-    Task { await session.sendText(text) }
+    sendAppText(text)
   }
 
   /// A remark from the separate coach, to be said by Gemini.
   func relayRemark(_ remark: String, kind: RemarkKind) {
-    guard let session else { return }
     let tone = kind == .hazard ? "Warn the user now" : "Tell the user"
-    Task { await session.sendText("[Genio] The vision coach noticed: \"\(remark)\". \(tone), in one short cautious sentence, in your words.") }
+    sendAppText("[Genio] The vision coach noticed: \"\(remark)\". \(tone), in one short cautious sentence, in your words.")
+  }
+
+  /// A message from the app that Gemini answers aloud.
+  private func sendAppText(_ text: String) {
+    guard let session else { return }
+    checkMutedUntil = nil
+    Task { await session.sendText(text) }
+  }
+
+  private var checkMuted: Bool {
+    guard let until = checkMutedUntil else { return false }
+    return Date() < until
   }
 
   // MARK: - Session events
@@ -229,8 +252,10 @@ final class LiveConversationEngine: ObservableObject {
   private func handle(_ event: LiveServerEvent) async {
     switch event {
     case .audio(let pcm):
+      guard !checkMuted else { break }  // a silent check's reply
       audio.playVoice(pcm24k: pcm)
       isModelSpeaking = true
+      lastSpeech = Date()
     case .interrupted:
       // The user started talking: stop Genio's voice at once.
       audio.flushVoice()
@@ -251,6 +276,13 @@ final class LiveConversationEngine: ObservableObject {
       }
       userTranscript += text
       heard.append((Date(), text))
+      lastSpeech = Date()
+      checkMutedUntil = nil
+      // The user spoke again after the camera request: their new words get
+      // answered as usual.
+      if let followUp = cameraFollowUp, Date().timeIntervalSince(followUp.requestedAt) > 1.5 {
+        cameraFollowUp = nil
+      }
       // "Genio stop" switches off directly, whatever the model does.
       if !stopHeard, VoiceStop.matches(userTranscript) {
         stopHeard = true
@@ -258,6 +290,7 @@ final class LiveConversationEngine: ObservableObject {
         onPauseRequested?()
       }
     case .outputTranscript(let text):
+      guard !checkMuted else { break }
       if !userTurnEnded {
         userTurnEnded = true
         let line = userTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -273,6 +306,12 @@ final class LiveConversationEngine: ObservableObject {
       inToolCall = true
       for call in calls {
         let response = tools.handle(call)
+        if call.name == TaskTools.Name.turnOnCamera.rawValue, response.response["camera"]?.stringValue == "starting" {
+          cameraFollowUp = (Date(), recentSpeech())
+        }
+        if response.response["advanced"] == .bool(true) || response.response["speak"] == .bool(true) {
+          checkMutedUntil = nil  // something worth saying
+        }
         onLog?("Tool \(call.name) â†’ \(response.response["status"]?.stringValue ?? "?")")
         responses.append(response)
       }
@@ -300,8 +339,7 @@ final class LiveConversationEngine: ObservableObject {
       if connectedSince == nil {
         // First connection of this session: the fixed greeting, once.
         connectedSince = Date()
-        let text = LiveInstructions.greeting(language: languageName)
-        if let session { Task { await session.sendText(text) } }
+        sendAppText(LiveInstructions.greeting(language: languageName))
       }
     case .reconnecting(let attempt):
       status = .reconnecting(attempt)
@@ -328,6 +366,7 @@ final class LiveConversationEngine: ObservableObject {
     // alive while the microphone is open.
     guard let session, status == .live else { return }
     if let since = connectedSince { metrics.connectedSeconds = Date().timeIntervalSince(since) }
+    defer { proactiveTick() }
     guard pacer.decide(frameTime: glasses.latestFrameTime, now: Date()) == .send else {
       syncMetrics(session)
       return
@@ -337,8 +376,39 @@ final class LiveConversationEngine: ObservableObject {
       return
     }
     let sent = await session.sendVideo(jpeg)
+    if sent { lastFrameSent = Date() }
     pacer.finished(frameTime: frameTime, now: Date(), sent: sent)
     syncMetrics(session)
+  }
+
+  /// What the app says to Gemini without the user speaking: "you can see
+  /// now" after a camera request, and the periodic silent step check.
+  private func proactiveTick() {
+    guard let session, status == .live, !inToolCall else { return }
+    let now = Date()
+    let speaking = isModelSpeaking || audio.isPlayingVoice
+    if let followUp = cameraFollowUp {
+      if let frame = lastFrameSent, frame > followUp.requestedAt {
+        guard !speaking else { return }  // let "turning the camera on" finish
+        cameraFollowUp = nil
+        onLog?("Camera ready: Gemini answers")
+        lastSpeech = now
+        sendAppText(LiveInstructions.cameraReady(userRequest: followUp.request))
+      } else if now.timeIntervalSince(followUp.requestedAt) > 10 {
+        cameraFollowUp = nil
+        onLog?("Camera did not start")
+        sendAppText(LiveInstructions.cameraFailed)
+      }
+      return
+    }
+    guard !speaking, !checkMuted else { return }
+    let task = engine.task
+    let step = task.flatMap { $0.currentStep != nil && !engine.paused ? ($0.current, $0.revision) : nil }
+    guard stepChecks.shouldCheck(now: now, step: step, cameraOn: glasses.cameraActive, lastSpeech: lastSpeech),
+          let task, let text = task.currentStep
+    else { return }
+    checkMutedUntil = now.addingTimeInterval(15)
+    Task { await session.sendText(LiveInstructions.stepCheck(step: task.current + 1, text: text)) }
   }
 
   private func syncMetrics(_ session: GeminiLiveSession) {
@@ -374,5 +444,10 @@ final class LiveConversationEngine: ObservableObject {
     genioTranscript = ""
     userTurnEnded = true
     genioTurnEnded = true
+    cameraFollowUp = nil
+    lastFrameSent = nil
+    stepChecks = StepCheckPolicy()
+    checkMutedUntil = nil
+    lastSpeech = nil
   }
 }
