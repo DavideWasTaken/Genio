@@ -41,6 +41,10 @@ final class GlassesManager: ObservableObject {
 
   /// A press of the capture button.
   var onPress: ((CapturePressType) -> Void)?
+  /// The glasses took a photo during the camera stream: while the camera
+  /// streams, they keep the capture button for their own photo action and
+  /// do not pass the press on, so this photo is the only trace of it.
+  var onGlassesPhoto: (() -> Void)?
   /// Diagnostic lines for the in-app log (errors, permission answers).
   var onLog: ((String) -> Void)?
 
@@ -341,6 +345,13 @@ final class GlassesManager: ObservableObject {
           default:
             break
           }
+        }
+      }.store(in: tokens)
+      newCamera.stream.photoDataPublisher.listen { [weak self] _ in
+        Task { @MainActor in
+          guard let self, self.camera === newCamera else { return }
+          self.log("Camera: the glasses took a photo (capture button)")
+          self.onGlassesPhoto?()
         }
       }.store(in: tokens)
       newCamera.stream.errorPublisher.listen { [weak self] error in

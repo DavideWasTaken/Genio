@@ -23,7 +23,8 @@ key in Settings.
 ## 2. Session
 
 - [ ] Press the capture button: chime, Camera pill green, status "Live" in Settings → Log, microphone pill green.
-- [ ] Press again: Camera pill goes grey (camera paused).
+- [ ] Press again: the glasses take a photo and GENIO switches off (Log: "photo taken while GENIO is on"); Camera pill goes grey.
+- [ ] With GENIO on, the glasses' end-call gesture on the touchpad switches GENIO off (Log: "Call: ended from the system").
 - [ ] Say "ciao": Genio answers in the chosen Gemini voice, on the glasses.
 - [ ] Transcripts of you and Genio appear on the main screen.
 - [ ] Talk over Genio while it speaks: it stops at once (barge-in) and listens.

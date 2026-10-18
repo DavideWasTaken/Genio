@@ -63,6 +63,13 @@ final class GenioController: ObservableObject {
 
   init() {
     glasses.onPress = { [weak self] press in self?.handlePress(press) }
+    // With the camera streaming, a capture press becomes a photo on the
+    // glasses instead of reaching Genio: that photo means "stop".
+    glasses.onGlassesPhoto = { [weak self] in
+      guard let self, self.active else { return }
+      self.note("Button: photo taken while GENIO is on, switching off")
+      self.stop()
+    }
     glasses.onLog = { [weak self] line in self?.note("Glasses: \(line)") }
     glasses.observeRegistration()
     audio.onLog = { [weak self] line in self?.note(line) }
