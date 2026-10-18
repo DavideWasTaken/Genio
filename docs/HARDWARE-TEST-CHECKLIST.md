@@ -22,7 +22,7 @@ key in Settings.
 
 ## 2. Session
 
-- [ ] Press the capture button: chime, "Ciao, sono Genio.", status "Live" in Settings → Log, microphone pill green, Camera pill still grey (off).
+- [ ] Press the capture button: chime, "Ciao, sono Genio. Cosa facciamo oggi?", status "Live" in Settings → Log, microphone pill green, Camera pill still grey (off).
 - [ ] Ask "guarda questo" or start a task: Genio says it is turning the camera on, the Camera pill turns green, then it answers about what it sees.
 - [ ] Finish or drop the task: the Camera pill goes grey again.
 - [ ] Say "Genio stop": GENIO switches off (Log: "Heard \"Genio stop\": switching off"); Camera pill goes grey. (The capture button takes a photo while GENIO is on: the glasses keep it.)

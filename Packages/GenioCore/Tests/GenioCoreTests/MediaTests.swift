@@ -69,8 +69,8 @@ final class LiveInstructionsTests: XCTestCase {
     XCTAssertTrue(text.contains("Speak Italian"))
     XCTAssertTrue(text.contains("[NOW] 1. a"))
     XCTAssertTrue(LiveInstructions.system(language: "English", snapshot: nil).contains("No task in progress"))
-    XCTAssertEqual(LiveInstructions.greetingLine(language: "Italian"), "Ciao, sono Genio.")
-    XCTAssertTrue(LiveInstructions.greeting(language: "English").contains("\"Hi, I'm Genio.\""))
+    XCTAssertEqual(LiveInstructions.greetingLine(language: "Italian"), "Ciao, sono Genio. Cosa facciamo oggi?")
+    XCTAssertTrue(LiveInstructions.greeting(language: "English").contains("\"Hi, I'm Genio. What are we doing today?\""))
     XCTAssertTrue(LiveInstructions.contextRecovery(snapshot: engine.snapshot()).hasPrefix("[Genio]"))
 
     engine.userConfirmedStep()

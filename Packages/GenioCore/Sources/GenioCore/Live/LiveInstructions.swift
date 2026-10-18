@@ -44,7 +44,7 @@ public enum LiveInstructions {
 
   /// The one line Genio says when a session starts, and nothing else.
   public static func greetingLine(language: String) -> String {
-    language == "Italian" ? "Ciao, sono Genio." : "Hi, I'm Genio."
+    language == "Italian" ? "Ciao, sono Genio. Cosa facciamo oggi?" : "Hi, I'm Genio. What are we doing today?"
   }
 
   /// Sent right after the session connects (not after reconnects).
