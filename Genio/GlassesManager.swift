@@ -323,6 +323,7 @@ final class GlassesManager: ObservableObject {
         Task { @MainActor in
           // Events from a camera already replaced by a restart are stale.
           guard let self, self.camera === newCamera else { return }
+          self.log("Camera: \(state)")
           switch state {
           case .streaming:
             self.status = .connected

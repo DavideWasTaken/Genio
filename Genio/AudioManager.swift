@@ -84,7 +84,9 @@ final class AudioManager: ObservableObject {
 
   /// The classic voice: iOS speaks, the glasses listen.
   func configureClassic(route: Voice.Route) {
-    stopCapture()
+    // Release the old engine (and its microphone) before changing the
+    // session: iOS refuses the change while the microphone still runs.
+    if mode != .classic(route) { rebuildEngine() }
     let session = AVAudioSession.sharedInstance()
     do {
       switch route {
@@ -98,7 +100,6 @@ final class AudioManager: ObservableObject {
     } catch {
       report("audio session (classic): \(error.localizedDescription)")
     }
-    if mode != .classic(route) { rebuildEngine() }
     mode = .classic(route)
     refreshRoute()
   }
@@ -117,6 +118,7 @@ final class AudioManager: ObservableObject {
   /// Returns false (with `lastError`) if the microphone cannot start.
   func configureLive(activatedByCall: Bool = false) async -> Bool {
     guard await microphoneAllowed() else { return false }
+    if mode != .live { rebuildEngine() }
     if !activatedByCall {
       let session = AVAudioSession.sharedInstance()
       do {
@@ -131,7 +133,6 @@ final class AudioManager: ObservableObject {
       }
     }
     lastError = nil
-    if mode != .live { rebuildEngine() }
     mode = .live
     refreshRoute()
     if !route.inputIsBluetooth {
@@ -143,20 +144,31 @@ final class AudioManager: ObservableObject {
   /// Glasses connected, GENIO off: silent playback that keeps iOS from
   /// suspending the app, so the glasses' button still works with Genio in
   /// the background. Mixed with other apps: music is not interrupted.
-  func configureStandby() {
+  func configureStandby(retry: Bool = true) {
     guard mode != .standby else { return }
-    stopCapture()
     flushVoice()
+    // Release the old engine (and its microphone) first: iOS refuses to
+    // change the session while the microphone still runs ('!pri').
+    rebuildEngine()
     let session = AVAudioSession.sharedInstance()
     do {
       try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
       try session.setActive(true)
       lastError = nil
     } catch {
-      report("audio session (standby): \(error.localizedDescription)")
+      // Often the system is still releasing the microphone or a call: once
+      // more, a moment later.
+      if retry {
+        onLog?("Audio: standby not ready (\(error.localizedDescription)), retrying")
+        Task { [weak self] in
+          try? await Task.sleep(for: .seconds(1))
+          self?.configureStandby(retry: false)
+        }
+      } else {
+        report("audio session (standby): \(error.localizedDescription)")
+      }
       return
     }
-    rebuildEngine()
     mode = .standby
     refreshRoute()
     if startKeepAlive() {
