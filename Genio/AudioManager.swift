@@ -86,7 +86,7 @@ final class AudioManager: ObservableObject {
   func configureClassic(route: Voice.Route) {
     // Release the old engine (and its microphone) before changing the
     // session: iOS refuses the change while the microphone still runs.
-    if mode != .classic(route) { rebuildEngine() }
+    if mode != .classic(route) { resetEngine() }
     let session = AVAudioSession.sharedInstance()
     do {
       switch route {
@@ -118,7 +118,7 @@ final class AudioManager: ObservableObject {
   /// Returns false (with `lastError`) if the microphone cannot start.
   func configureLive(activatedByCall: Bool = false) async -> Bool {
     guard await microphoneAllowed() else { return false }
-    if mode != .live { rebuildEngine() }
+    if mode != .live { resetEngine() }
     if !activatedByCall {
       let session = AVAudioSession.sharedInstance()
       do {
@@ -149,7 +149,7 @@ final class AudioManager: ObservableObject {
     flushVoice()
     // Release the old engine (and its microphone) first: iOS refuses to
     // change the session while the microphone still runs ('!pri').
-    rebuildEngine()
+    resetEngine()
     let session = AVAudioSession.sharedInstance()
     do {
       try session.setCategory(.playback, mode: .default, options: [.mixWithOthers])
@@ -225,7 +225,20 @@ final class AudioManager: ObservableObject {
 
   private func startCapture() -> Bool {
     guard !capturing else { return true }
+    // The session must offer a working input before the input node is
+    // touched: voice processing on an input without a valid format raises
+    // an exception that would crash the app.
+    let session = AVAudioSession.sharedInstance()
+    guard session.isInputAvailable else {
+      report("No microphone available (route: \(route.input)).")
+      return false
+    }
     let input = engine.inputNode
+    let hardware = input.inputFormat(forBus: 0)
+    guard hardware.sampleRate > 0, hardware.channelCount > 0 else {
+      report("The microphone is not ready (format \(hardware)).")
+      return false
+    }
     do {
       // Echo cancellation: Genio's voice must not come back as the user's.
       if !input.isVoiceProcessingEnabled { try input.setVoiceProcessingEnabled(true) }
@@ -266,15 +279,25 @@ final class AudioManager: ObservableObject {
 
   // MARK: - Engine
 
-  /// A fresh engine per mode: voice processing and the input tap belong to
-  /// Live only, and the classic session may have no input at all.
-  private func rebuildEngine() {
+  /// Drops the current engine (stopping it releases the microphone) for a
+  /// bare new one. Call it before changing the session; the players are
+  /// connected later, once the session is active, by connectPlayers() —
+  /// after voice processing is enabled in Live mode, as AVAudioEngine needs.
+  private func resetEngine() {
     stopCapture()
+    tonePlayer.stop()
+    voicePlayer.stop()
+    keepAlivePlayer.stop()
+    queuedVoiceBuffers = 0
     engine.stop()
-    if tonePlayer.engine != nil { engine.detach(tonePlayer) }
-    if voicePlayer.engine != nil { engine.detach(voicePlayer) }
-    if keepAlivePlayer.engine != nil { engine.detach(keepAlivePlayer) }
+    for node in [tonePlayer, voicePlayer, keepAlivePlayer] where node.engine != nil {
+      engine.detach(node)
+    }
     engine = AVAudioEngine()
+  }
+
+  private func connectPlayers() {
+    guard tonePlayer.engine == nil else { return }
     engine.attach(tonePlayer)
     engine.connect(tonePlayer, to: engine.mainMixerNode, format: toneFormat)
     engine.attach(voicePlayer)
@@ -300,7 +323,7 @@ final class AudioManager: ObservableObject {
 
   @discardableResult
   private func startEngine() -> Bool {
-    if tonePlayer.engine == nil { rebuildEngine() }
+    connectPlayers()
     guard !engine.isRunning else { return true }
     do {
       engine.prepare()
@@ -366,7 +389,7 @@ final class AudioManager: ObservableObject {
     onLog?("Audio: media services were reset, rebuilding")
     let current = mode
     mode = .idle
-    rebuildEngine()
+    resetEngine()
     switch current {
     case .classic(let route): configureClassic(route: route)
     case .live: Task { _ = await configureLive() }
