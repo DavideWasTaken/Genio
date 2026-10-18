@@ -53,7 +53,8 @@ key in Settings.
 - [ ] Phone call during a session: audio pauses; after the call Genio works again (or reconnects).
 - [ ] Wrong API key: GENIO does not start; an iOS-voice line says the key is missing/invalid; no retry loop in the Log.
 - [ ] GENIO on, lock the phone and put it in a pocket for 2 minutes: the conversation goes on and Genio still sees (ask "what do you see?"); frames sent keeps growing.
-- [ ] GENIO off, glasses connected, app in the background (or phone locked) for 5 minutes: the glasses' button starts GENIO.
+- [ ] GENIO off, glasses connected, app in the background (or phone locked) for 5 minutes: the glasses' button starts GENIO and Gemini answers (no "can't open the microphone").
+- [ ] While GENIO is on, "Genio" shows as a call in the Dynamic Island; hanging up there switches GENIO off.
 - [ ] With music playing from another app and GENIO off: the music is not interrupted by Genio's standby.
 
 ## 5. Settings

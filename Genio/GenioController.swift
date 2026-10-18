@@ -44,8 +44,10 @@ final class GenioController: ObservableObject {
 
   let glasses = GlassesManager()
   let audio = AudioManager()
+  /// GENIO sessions as calls, so the microphone can start from the background.
+  let call = CallSession()
   let taskEngine = TaskEngine(store: FileTaskStore.standard())
-  private(set) lazy var live = LiveConversationEngine(audio: audio, glasses: glasses, engine: taskEngine)
+  private(set) lazy var live = LiveConversationEngine(audio: audio, call: call, glasses: glasses, engine: taskEngine)
   private lazy var voice = Voice(audio: audio)
   private lazy var coach = CoachEngine(
     engine: taskEngine, glasses: glasses,
@@ -68,6 +70,9 @@ final class GenioController: ObservableObject {
     audio.onLog = { [weak self] line in self?.note(line) }
     live.onLog = { [weak self] line in self?.note(line) }
     live.onPauseRequested = { [weak self] in self?.pauseRequestedByLive() }
+    call.onLog = { [weak self] line in self?.note(line) }
+    // The user hung up from the Dynamic Island or the lock screen.
+    call.onEndedBySystem = { [weak self] in self?.stop() }
     coach.onLog = { [weak self] line in self?.note(line) }
     coach.onRemark = { [weak self] remark, kind in self?.live.relayRemark(remark, kind: kind) }
     taskEngine.onEvent = { [weak self] event in self?.taskChanged(event) }
@@ -159,9 +164,12 @@ final class GenioController: ObservableObject {
     voice.chime(.off)
     UIApplication.shared.isIdleTimerDisabled = false
     note("GENIO off")
-    // Give the chime time to play, then release the microphone.
+    // Give the chime time to play, then release the microphone. The call
+    // ends asynchronously: if standby cannot start yet, try once more.
     Task {
       try? await Task.sleep(for: .seconds(0.6))
+      restoreIdleAudio()
+      try? await Task.sleep(for: .seconds(1.5))
       restoreIdleAudio()
     }
   }
@@ -191,7 +199,13 @@ final class GenioController: ObservableObject {
     guard active else { return }
     note("Gemini Live stopped: \(reason)")
     stop()
-    speakFallback(reason.localizedCaseInsensitiveContains("key") ? .noGeminiKey : .unreachable)
+    if reason.localizedCaseInsensitiveContains("key") {
+      speakFallback(.noGeminiKey)
+    } else if live.lastFailureWasAudio {
+      speakFallback(.microphoneUnavailable)
+    } else {
+      speakFallback(.unreachable)
+    }
   }
 
   // MARK: - Task events

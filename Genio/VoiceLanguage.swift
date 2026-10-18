@@ -53,6 +53,7 @@ enum VoiceLanguage: String, CaseIterable, Identifiable {
   enum Line {
     case noGeminiKey
     case unreachable
+    case microphoneUnavailable
   }
 
   func say(_ line: Line) -> String {
@@ -61,6 +62,8 @@ enum VoiceLanguage: String, CaseIterable, Identifiable {
     case (.english, .noGeminiKey): return "The Gemini key is missing in Settings."
     case (.italian, .unreachable): return "Non riesco a contattare Gemini adesso."
     case (.english, .unreachable): return "I can't reach Gemini right now."
+    case (.italian, .microphoneUnavailable): return "Non riesco ad aprire il microfono. Apri Genio sul telefono e riprova."
+    case (.english, .microphoneUnavailable): return "I can't open the microphone. Open Genio on the phone and try again."
     }
   }
 }

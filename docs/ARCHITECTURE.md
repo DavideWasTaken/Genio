@@ -94,6 +94,11 @@ the system instruction and a `[Genio]` recovery message carry the task again.
 - DAT Speech is not used: Gemini does the listening, so nothing is recognised
   twice. AVSpeechSynthesizer is used only for lines Gemini cannot say (no key,
   no connection).
+- Each GENIO session is a CallKit call (`CallSession`): iOS refuses to start
+  the microphone from the background otherwise. CallKit configures and
+  activates the session (`configureLive(activatedByCall:)` skips its own
+  activation); ending the call from the system UI switches GENIO off. If iOS
+  refuses the call, the session starts without it (fine on screen).
 - Standby (glasses connected, GENIO off): silent looped playback, mixed with
   other apps, so the app stays alive in the background for the button.
 - Interruptions (calls, Siri), route changes, engine configuration changes and

@@ -73,13 +73,13 @@ struct ContentView: View {
                 Label("You", systemImage: "waveform")
                   .font(.footnote.weight(.semibold))
                   .foregroundStyle(.secondary)
-                Text(verbatim: "“\(live.userTranscript)”")
+                Text(verbatim: "“\(live.userTranscript.trimmingCharacters(in: .whitespacesAndNewlines))”")
               }
               if !live.genioTranscript.isEmpty {
                 Label("Genio", systemImage: "sparkles")
                   .font(.footnote.weight(.semibold))
                   .foregroundStyle(Color.genioViolet)
-                Text(verbatim: live.genioTranscript)
+                Text(verbatim: live.genioTranscript.trimmingCharacters(in: .whitespacesAndNewlines))
               }
             }
           }

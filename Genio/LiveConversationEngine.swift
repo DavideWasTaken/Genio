@@ -55,6 +55,7 @@ final class LiveConversationEngine: ObservableObject {
   var onLog: ((String) -> Void)?
 
   private let audio: AudioManager
+  private let call: CallSession
   private let glasses: GlassesManager
   private let engine: TaskEngine
   private let tools: TaskTools
@@ -75,9 +76,16 @@ final class LiveConversationEngine: ObservableObject {
   /// Bumped by stop(): a start() still waiting (microphone permission,
   /// audio setup) sees it changed and gives up.
   private var startGeneration = 0
+  /// Genio finished its turn: its next words start a new transcript.
+  private var genioTurnEnded = true
+  /// The user's words were answered: their next words start a new one.
+  private var userTurnEnded = true
+  /// The last start failed because of the microphone (not the network).
+  private(set) var lastFailureWasAudio = false
 
-  init(audio: AudioManager, glasses: GlassesManager, engine: TaskEngine) {
+  init(audio: AudioManager, call: CallSession, glasses: GlassesManager, engine: TaskEngine) {
     self.audio = audio
+    self.call = call
     self.glasses = glasses
     self.engine = engine
     tools = TaskTools(engine: engine)
@@ -105,9 +113,19 @@ final class LiveConversationEngine: ObservableObject {
     let (stream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingNewest(64))
     micContinuation = continuation
     audio.onMicrophonePCM = { pcm in continuation.yield(pcm) }
-    let audioReady = await audio.configureLive()
+    lastFailureWasAudio = false
+    // The microphone permission must be asked with the app on screen; a
+    // call (CallKit) then lets the microphone start even from the
+    // background. If iOS refuses the call, try without (works on screen).
+    var audioReady = false
+    if await audio.microphoneAllowed() {
+      let inCall = await call.start()
+      guard myStart == startGeneration else { return }  // stopped meanwhile
+      audioReady = await audio.configureLive(activatedByCall: inCall)
+    }
     guard myStart == startGeneration else { return }  // stopped meanwhile
     guard audioReady else {
+      lastFailureWasAudio = true
       status = .failed(audio.lastError ?? String(localized: "The microphone could not start."))
       cleanUp()
       return
@@ -207,19 +225,31 @@ final class LiveConversationEngine: ObservableObject {
       isModelSpeaking = false
     case .turnComplete, .generationComplete:
       isModelSpeaking = audio.isPlayingVoice
-      if !genioTranscript.isEmpty, event == .turnComplete {
-        onLog?("Genio: \(genioTranscript)")
+      if event == .turnComplete, !genioTurnEnded {
+        genioTurnEnded = true
+        let line = genioTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !line.isEmpty { onLog?("Genio: \(line)") }
       }
     case .inputTranscript(let text):
-      if isModelSpeaking == false, !genioTranscript.isEmpty { genioTranscript = "" }
-      userTranscript = Self.joined(userTranscript, text)
+      // Pieces keep their own spacing ("Ciao", " come", " stai?"): joined
+      // as they come, trimmed only for display.
+      if userTurnEnded {
+        userTranscript = ""
+        userTurnEnded = false
+      }
+      userTranscript += text
       heard.append((Date(), text))
     case .outputTranscript(let text):
-      if !userTranscript.isEmpty {
-        onLog?("Heard: \(userTranscript)")
-        userTranscript = ""
+      if !userTurnEnded {
+        userTurnEnded = true
+        let line = userTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !line.isEmpty { onLog?("Heard: \(line)") }
       }
-      genioTranscript = Self.joined(genioTranscript, text)
+      if genioTurnEnded {
+        genioTranscript = ""
+        genioTurnEnded = false
+      }
+      genioTranscript += text
     case .toolCall(let calls):
       var responses: [FunctionResponse] = []
       inToolCall = true
@@ -247,6 +277,7 @@ final class LiveConversationEngine: ObservableObject {
     case .idle, .connecting:
       status = .connecting
     case .ready:
+      if status != .live { onLog?("Gemini Live: connected") }
       status = .live
       connectedSince = connectedSince ?? Date()
     case .reconnecting(let attempt):
@@ -312,14 +343,13 @@ final class LiveConversationEngine: ObservableObject {
     micContinuation = nil
     audio.onMicrophonePCM = nil
     audio.flushVoice()
+    call.end()
     session = nil
     connectedSince = nil
     isModelSpeaking = false
     userTranscript = ""
-  }
-
-  /// Transcription arrives in pieces ("Ciao", " come", " stai?").
-  private static func joined(_ text: String, _ piece: String) -> String {
-    (text + piece).trimmingCharacters(in: .whitespaces)
+    genioTranscript = ""
+    userTurnEnded = true
+    genioTurnEnded = true
   }
 }

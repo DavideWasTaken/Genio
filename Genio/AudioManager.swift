@@ -103,24 +103,34 @@ final class AudioManager: ObservableObject {
     refreshRoute()
   }
 
+  /// Whether the microphone may be used (asks the first time, which needs
+  /// the app on screen).
+  func microphoneAllowed() async -> Bool {
+    if await AVAudioApplication.requestRecordPermission() { return true }
+    report("Microphone permission denied: Settings → Genio → Microphone.")
+    return false
+  }
+
   /// Gemini Live: two-way audio over the glasses' hands-free profile.
+  /// `activatedByCall`: CallKit has already configured and activated the
+  /// session (the only way to open the microphone from the background).
   /// Returns false (with `lastError`) if the microphone cannot start.
-  func configureLive() async -> Bool {
-    guard await AVAudioApplication.requestRecordPermission() else {
-      report("Microphone permission denied: Settings → Genio → Microphone.")
-      return false
+  func configureLive(activatedByCall: Bool = false) async -> Bool {
+    guard await microphoneAllowed() else { return false }
+    if !activatedByCall {
+      let session = AVAudioSession.sharedInstance()
+      do {
+        try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
+        try session.setPreferredSampleRate(16_000)
+        try session.setPreferredIOBufferDuration(0.02)
+        try session.setActive(true)
+        lastError = nil
+      } catch {
+        report("audio session (live): \(error.localizedDescription)")
+        return false
+      }
     }
-    let session = AVAudioSession.sharedInstance()
-    do {
-      try session.setCategory(.playAndRecord, mode: .voiceChat, options: [.allowBluetoothHFP])
-      try session.setPreferredSampleRate(16_000)
-      try session.setPreferredIOBufferDuration(0.02)
-      try session.setActive(true)
-      lastError = nil
-    } catch {
-      report("audio session (live): \(error.localizedDescription)")
-      return false
-    }
+    lastError = nil
     if mode != .live { rebuildEngine() }
     mode = .live
     refreshRoute()
