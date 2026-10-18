@@ -138,18 +138,24 @@ struct HardwareTestView: View {
             .font(.footnote)
             .foregroundStyle(age < 2 ? Color.secondary : Color.orange)
         } else {
-          (glasses.status == .streaming ? Text("No frame yet.") : Text("Connect the glasses first."))
+          (glasses.status == .connected ? Text("No frame yet.") : Text("Connect the glasses first."))
             .foregroundStyle(.secondary)
         }
         Button("Take a frame") { frame = glasses.latestImage() }
-          .disabled(glasses.status != .streaming)
+          .disabled(!glasses.cameraActive)
       } header: {
         Text("Camera")
+      } footer: {
+        Text("The camera runs only while GENIO is on or this page is open, to save the glasses' battery.")
       }
     }
     .navigationTitle("Test audio and camera")
     .navigationBarTitleDisplayMode(.inline)
-    .onDisappear { stopAudio() }
+    .onAppear { glasses.setCamera(needed: true, by: "test") }
+    .onDisappear {
+      stopAudio()
+      glasses.setCamera(needed: false, by: "test")
+    }
   }
 
   private func startAudio() async {

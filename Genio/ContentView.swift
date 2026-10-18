@@ -8,7 +8,7 @@ struct ContentView: View {
   @Environment(\.scenePhase) private var scenePhase
   @State private var showSettings = false
 
-  private var glassesReady: Bool { glasses.status == .streaming }
+  private var glassesReady: Bool { glasses.status == .connected }
 
   private var connecting: Bool {
     switch live.status {
@@ -92,7 +92,7 @@ struct ContentView: View {
       // Glasses gone while GENIO is on (folded, out of range): stop it. The
       // task stays saved and resumes with the next press.
       .onChange(of: glasses.status) { _, status in
-        if status != .streaming && genio.active { genio.stop() }
+        if status != .connected && genio.active { genio.stop() }
       }
       .onChange(of: scenePhase) { _, phase in
         genio.appWentToBackground(phase == .background)
@@ -179,7 +179,7 @@ struct GlassesCard: View {
       }
 
       HStack(spacing: 8) {
-        StatusPill(title: "Camera", systemImage: "camera.fill", isOn: glasses.status == .streaming)
+        StatusPill(title: "Camera", systemImage: "camera.fill", isOn: glasses.cameraActive)
         StatusPill(title: "Button", systemImage: "button.programmable", isOn: glasses.buttonReady)
         StatusPill(title: "Microphone", systemImage: "mic.fill", isOn: liveActive && audio.micIsGlasses)
       }
@@ -204,7 +204,7 @@ struct GlassesCard: View {
         if glasses.needsGlassesAppUpdate {
           action("Update the glasses software", prominent: false) { await glasses.openGlassesAppUpdate() }
         }
-        if glasses.status == .streaming || glasses.status == .waitingForGlasses || glasses.status == .connecting {
+        if glasses.status == .connected || glasses.status == .waitingForGlasses || glasses.status == .connecting {
           Button("Disconnect", role: .destructive) { glasses.disconnect() }
             .font(.subheadline)
         }
@@ -236,14 +236,14 @@ struct GlassesCard: View {
       return glasses.registered ? String(localized: "Not connected") : String(localized: "Link with Meta AI first")
     case .connecting: return String(localized: "Connecting…")
     case .waitingForGlasses: return String(localized: "Waiting for the glasses")
-    case .streaming: return String(localized: "Connected")
+    case .connected: return String(localized: "Connected")
     case .failed(let why): return why
     }
   }
 
   private var statusColor: Color {
     switch glasses.status {
-    case .streaming: return .green
+    case .connected: return .green
     case .failed: return .red
     case .connecting, .waitingForGlasses: return .orange
     case .disconnected: return .secondary

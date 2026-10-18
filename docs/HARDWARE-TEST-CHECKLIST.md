@@ -11,7 +11,8 @@ key in Settings.
 
 ## 1. Glasses and audio route
 
-- [ ] *Connect glasses*: Camera and Button pills turn green.
+- [ ] *Connect glasses*: the Button pill turns green; the Camera pill lights up for a moment, then goes grey (the camera pauses while GENIO is off).
+- [ ] Leave the glasses connected and GENIO off for a few minutes: still *Connected*, the button still starts GENIO (the session survives with the camera paused).
 - [ ] Settings → Test audio and camera → *Start the audio test*:
   - [ ] Microphone shows the glasses (Bluetooth HFP), not "iPhone Microphone".
   - [ ] Speaking into the glasses moves the bar; tapping the glasses' frame does too.
@@ -21,7 +22,8 @@ key in Settings.
 
 ## 2. Session
 
-- [ ] Press the capture button: chime, status "Live" in Settings → Log, microphone pill green.
+- [ ] Press the capture button: chime, Camera pill green, status "Live" in Settings → Log, microphone pill green.
+- [ ] Press again: Camera pill goes grey (camera paused).
 - [ ] Say "ciao": Genio answers in the chosen Gemini voice, on the glasses.
 - [ ] Transcripts of you and Genio appear on the main screen.
 - [ ] Talk over Genio while it speaks: it stops at once (barge-in) and listens.

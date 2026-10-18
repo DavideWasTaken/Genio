@@ -115,6 +115,7 @@ Genio is an early, personal project. Things to know:
 - **Inputs is experimental** in DAT SDK 1.0: fine for development and beta builds, not yet allowed in App Store releases. That's why Genio is built and installed from source.
 - **The glasses' own software must be current.** An older DAT component on the glasses refuses the session (`datAppOnTheGlassesUpdateRequired`); Genio shows an update button.
 - **Short press** may also take a photo with some glasses software. If it does, switch to double or long press in Settings.
+- **Battery.** The glasses' camera streams only while GENIO is on (or the camera test is open); idle, they keep just the button.
 - **Keep the app open.** While GENIO is on the screen stays awake. iOS may keep audio running briefly in the background, but camera frames stop and iOS can suspend the app at any time; the task is saved either way.
 - **Sessions.** Gemini Live connections last about 10 minutes; Genio moves to a new one with session resumption, so the conversation goes on. If resumption fails, Genio sends the task state again.
 

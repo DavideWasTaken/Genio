@@ -115,7 +115,7 @@ final class GenioController: ObservableObject {
   func start() {
     guard !active else { return }
     // No glasses, no GENIO: it needs their camera, button and microphone.
-    guard glasses.status == .streaming else {
+    guard glasses.status == .connected else {
       note("GENIO needs the glasses connected first")
       return
     }
@@ -126,6 +126,7 @@ final class GenioController: ObservableObject {
     }
     active = true
     UIApplication.shared.isIdleTimerDisabled = true
+    glasses.setCamera(needed: true, by: "genio")
     taskEngine.resume()
     if task?.finished == true { taskEngine.clear() }
     let settings = LiveConversationEngine.Settings(
@@ -149,6 +150,8 @@ final class GenioController: ObservableObject {
     coach.stop()
     taskEngine.pause()
     live.stop()
+    // Idle glasses keep only the button: the camera stops to save battery.
+    glasses.setCamera(needed: false, by: "genio")
     voice.chime(.off)
     UIApplication.shared.isIdleTimerDisabled = false
     note("GENIO off")

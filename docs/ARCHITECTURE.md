@@ -99,7 +99,10 @@ the system instruction and a `[Genio]` recovery message carry the task again.
 
 ## Video
 
-The DAT camera streams 504×896 at 7 fps; only the newest frame is kept.
+The DAT camera streams 504×896 at 7 fps, but only while GENIO is on or the
+camera test is open: when the glasses connect it runs just long enough to
+deliver a first frame (the button is attached after it), then pauses, so idle
+glasses keep only the button and save battery. Only the newest frame is kept.
 `FramePacer` takes at most one frame per interval (≤ 1 fps), only if it is
 fresher than 1.5 s, and only when the previous one has finished encoding and
 sending (no queue: a slow network drops frames instead of sending old ones).

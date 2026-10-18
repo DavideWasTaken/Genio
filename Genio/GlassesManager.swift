@@ -19,7 +19,9 @@ final class GlassesManager: ObservableObject {
     case disconnected
     case connecting
     case waitingForGlasses
-    case streaming
+    /// The session is up and the camera works; the camera itself streams
+    /// only while someone needs it (see `cameraActive`).
+    case connected
     case failed(String)
   }
 
@@ -27,6 +29,10 @@ final class GlassesManager: ObservableObject {
   @Published private(set) var status: Status = .disconnected
   /// The capture button is wired up (Inputs attached).
   @Published private(set) var buttonReady = false
+  /// The camera is streaming frames right now. It runs only while GENIO is
+  /// on or the camera test is open: idle glasses keep just the button, to
+  /// save their battery.
+  @Published private(set) var cameraActive = false
   /// One line per pair Meta AI knows: name, link, compatibility, worn, battery.
   @Published private(set) var deviceLines: [String] = []
   /// The glasses refused the session because their DAT app is too old for
@@ -55,6 +61,8 @@ final class GlassesManager: ObservableObject {
   /// `.started` cannot start a second round of requests.
   private var preparing = false
   private let latest = LatestFrame()
+  /// Who needs the camera now ("genio", "test"); empty: it is paused.
+  private var cameraUsers: Set<String> = []
 
   private enum Access: Equatable {
     case granted
@@ -235,6 +243,7 @@ final class GlassesManager: ObservableObject {
     camera = nil
     inputs = nil
     buttonReady = false
+    cameraActive = false
     cameraRestarts = 0
     cameraRestarting = false
     streamingSince = nil
@@ -242,8 +251,9 @@ final class GlassesManager: ObservableObject {
     status = newStatus
   }
 
-  /// Camera permission first (required), then the camera stream. The button
-  /// follows the first frame.
+  /// Camera permission first (required), then a short camera start: the
+  /// button is attached after the first frame (proof that the session works),
+  /// then the camera pauses until GENIO or the camera test needs it.
   private func prepare(_ session: DeviceSession) async {
     guard camera == nil, !preparing else { return }
     preparing = true
@@ -303,7 +313,10 @@ final class GlassesManager: ObservableObject {
       let latest = self.latest
       newCamera.stream.videoFramePublisher.listen { [weak self] frame in
         if latest.set(frame) {
-          Task { @MainActor in self?.attachButton(to: session) }
+          Task { @MainActor in
+            self?.attachButton(to: session)
+            self?.pauseCameraIfUnneeded()
+          }
         }
       }.store(in: tokens)
       newCamera.stream.statePublisher.listen { [weak self] state in
@@ -312,10 +325,13 @@ final class GlassesManager: ObservableObject {
           guard let self, self.camera === newCamera else { return }
           switch state {
           case .streaming:
-            self.status = .streaming
+            self.status = .connected
+            self.cameraActive = true
             self.streamingSince = Date()
           case .waitingForDevice, .starting:
-            self.status = .waitingForGlasses
+            // A camera starting again on a working session (GENIO switched
+            // on) does not make the glasses less connected.
+            if self.status != .connected { self.status = .waitingForGlasses }
           case .stopped where self.streamingSince != nil:
             // Only a stream that was running: not one still starting up.
             self.restartCamera(on: session, reason: "stream stopped")
@@ -342,6 +358,11 @@ final class GlassesManager: ObservableObject {
   /// keep seeing. The button stays attached to the session.
   private func restartCamera(on session: DeviceSession, reason: String) {
     guard self.session === session, camera != nil, !cameraRestarting else { return }
+    guard !cameraUsers.isEmpty || status != .connected else {
+      // Nobody needs it: leave it off.
+      pauseCamera(reason: reason)
+      return
+    }
     if let since = streamingSince, Date().timeIntervalSince(since) > 60 {
       cameraRestarts = 0
     }
@@ -359,9 +380,41 @@ final class GlassesManager: ObservableObject {
       try? await Task.sleep(for: .seconds(2))
       guard let self else { return }
       self.cameraRestarting = false
-      guard self.session === session else { return }
+      guard self.session === session, !self.cameraUsers.isEmpty || self.status != .connected else { return }
       self.attachCamera(to: session)
     }
+  }
+
+  /// Starts the camera for `user` ("genio", "test") or releases it. It
+  /// streams while anyone needs it and pauses when nobody does.
+  func setCamera(needed: Bool, by user: String) {
+    if needed { cameraUsers.insert(user) } else { cameraUsers.remove(user) }
+    guard let session, status == .connected else { return }
+    if !cameraUsers.isEmpty, camera == nil, !cameraRestarting {
+      log("Camera: on (\(cameraUsers.sorted().joined(separator: ", ")))")
+      attachCamera(to: session)
+    } else if cameraUsers.isEmpty {
+      pauseCameraIfUnneeded()
+    }
+  }
+
+  private func pauseCameraIfUnneeded() {
+    guard cameraUsers.isEmpty, camera != nil, inputs != nil else { return }
+    // A frame arrived, so the glasses work, even if the camera's own
+    // "streaming" event has not come yet (it would be ignored once paused).
+    if status != .connected { status = .connected }
+    pauseCamera(reason: "not needed")
+  }
+
+  /// Stops the stream; the session and the button stay up.
+  private func pauseCamera(reason: String) {
+    let old = camera
+    camera = nil  // first, so its .stopped event is not taken for a failure
+    old?.stop()
+    streamingSince = nil
+    cameraActive = false
+    latest.clear()
+    log("Camera: paused (\(reason))")
   }
 
   /// The most recent frame and its age, for the camera test in Settings.

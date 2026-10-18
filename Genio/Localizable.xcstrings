@@ -41,16 +41,6 @@
         }
       }
     },
-    "Account": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Account"
-          }
-        }
-      }
-    },
     "Add your Gemini API key in Settings, then press the button on your glasses.": {
       "localizations": {
         "it": {
@@ -67,16 +57,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Audio"
-          }
-        }
-      }
-    },
-    "Automatic": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Automatico"
           }
         }
       }
@@ -147,26 +127,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Fotocamera: %@"
-          }
-        }
-      }
-    },
-    "Coach": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Coach"
-          }
-        }
-      }
-    },
-    "Coach model": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Modello del coach"
           }
         }
       }
@@ -261,16 +221,6 @@
         }
       }
     },
-    "Diagnostics": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Diagnostica"
-          }
-        }
-      }
-    },
     "Disconnect": {
       "localizations": {
         "it": {
@@ -341,16 +291,6 @@
         }
       }
     },
-    "Gemini Live": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Gemini Live"
-          }
-        }
-      }
-    },
     "Gemini is hearing the phone's microphone, not the glasses: %@": {
       "localizations": {
         "it": {
@@ -391,32 +331,12 @@
         }
       }
     },
-    "Heard": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ho sentito"
-          }
-        }
-      }
-    },
     "If a short press also takes a photo, pick double or long press.": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
             "value": "Se la pressione breve scatta anche una foto, scegli doppia o lunga."
-          }
-        }
-      }
-    },
-    "Language": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Lingua"
           }
         }
       }
@@ -477,16 +397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pressione lunga"
-          }
-        }
-      }
-    },
-    "Main": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Principale"
           }
         }
       }
@@ -557,16 +467,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ancora niente: connetti gli occhiali o avvia GENIO."
-          }
-        }
-      }
-    },
-    "Now": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Adesso"
           }
         }
       }
@@ -761,6 +661,16 @@
         }
       }
     },
+    "The camera runs only while GENIO is on or this page is open, to save the glasses' battery.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La fotocamera resta accesa solo con GENIO attivo o con questa pagina aperta, per risparmiare la batteria degli occhiali."
+          }
+        }
+      }
+    },
     "The glasses camera is not available.": {
       "localizations": {
         "it": {
@@ -817,16 +727,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Aggiorna il software degli occhiali"
-          }
-        }
-      }
-    },
-    "Version": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Versione"
           }
         }
       }
