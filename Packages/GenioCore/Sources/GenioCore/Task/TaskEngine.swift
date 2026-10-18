@@ -11,6 +11,8 @@ public enum TaskEvent: Equatable, Sendable {
   case planRevised(GenioTask, fromStep: Int)
   /// The task was dropped ("new task").
   case cleared
+  /// An earlier task was picked up again.
+  case resumed(GenioTask)
 }
 
 public enum StepChangeReason: String, Codable, Sendable {
@@ -70,6 +72,10 @@ public final class TaskEngine: ObservableObject {
   @Published public private(set) var paused = false
   /// Recent looks at the task, newest last (memory for the models and the UI).
   @Published public private(set) var observations: [StepObservation] = []
+  /// Earlier tasks, newest first (unfinished ones can be resumed).
+  @Published public private(set) var archive: [GenioTask] = []
+  /// What Genio remembers about the user, oldest first.
+  @Published public private(set) var facts: [String] = []
 
   /// Called for every change the user should hear about.
   public var onEvent: ((TaskEvent) -> Void)?
@@ -82,15 +88,25 @@ public final class TaskEngine: ObservableObject {
   private let now: () -> Date
   private var lastRemarkAt = Date.distantPast
   private let memorySize = 12
+  private let archiveSize = 20
+  private let factsSize = 30
 
   public init(store: TaskStore? = nil, verifier: CompletionVerifier = CompletionVerifier(), now: @escaping () -> Date = Date.init) {
     self.store = store
     self.verifier = verifier
     self.now = now
-    if let saved = store?.load(), let savedTask = saved.task, !savedTask.finished {
-      task = savedTask
-      paused = true
-      observations = saved.observations
+    if let saved = store?.load() {
+      archive = saved.archive ?? []
+      facts = saved.facts ?? []
+      if let savedTask = saved.task {
+        if savedTask.finished {
+          archive = Self.inserted(savedTask, into: archive, limit: archiveSize)
+        } else {
+          task = savedTask
+          paused = true
+          observations = saved.observations
+        }
+      }
     }
   }
 
@@ -114,7 +130,9 @@ public final class TaskEngine: ObservableObject {
       guard !cleaned.isEmpty else { return .failure(.tooFewSteps(min: 1)) }
       cleaned = Array(cleaned.prefix(PlanRules.maxSteps))
     }
-    let newTask = GenioTask(goal: String(title.prefix(PlanRules.maxGoalLength)), steps: cleaned)
+    var newTask = GenioTask(goal: String(title.prefix(PlanRules.maxGoalLength)), steps: cleaned)
+    newTask.updatedAt = now()
+    archiveCurrent()
     task = newTask
     paused = false
     observations = []
@@ -185,9 +203,10 @@ public final class TaskEngine: ObservableObject {
     onEvent?(.stepChanged(current, reason: .back))
   }
 
-  /// "New task": drops the current one.
+  /// "New task": sets the current one aside (in the archive, resumable).
   public func clear() {
     guard task != nil else { return }
+    archiveCurrent()
     task = nil
     paused = false
     observations = []
@@ -277,12 +296,80 @@ public final class TaskEngine: ObservableObject {
     }
   }
 
+  // MARK: - Memory
+
+  /// Unfinished earlier tasks, newest first.
+  public var resumableTasks: [GenioTask] { archive.filter { !$0.finished } }
+
+  /// Picks up an earlier, unfinished task; the current one goes to the
+  /// archive. `idPrefix`: the start of its id, as listed to the model.
+  @discardableResult
+  public func resumeTask(idPrefix: String) -> Result<GenioTask, PlanError> {
+    let key = idPrefix.lowercased().trimmingCharacters(in: .whitespaces)
+    guard !key.isEmpty,
+          let index = archive.firstIndex(where: { $0.id.uuidString.lowercased().hasPrefix(key) && !$0.finished })
+    else { return .failure(.noTask) }
+    var picked = archive.remove(at: index)
+    archiveCurrent()
+    picked.revision += 1  // anything computed before is about another moment
+    picked.recentRemarks = []
+    picked.updatedAt = now()
+    task = picked
+    paused = false
+    observations = []
+    verifier.reset()
+    save()
+    onEvent?(.resumed(picked))
+    return .success(picked)
+  }
+
+  /// Remembers a fact about the user; false if empty or already known.
+  @discardableResult
+  public func rememberFact(_ fact: String) -> Bool {
+    let text = fact.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !text.isEmpty, !facts.contains(where: { $0.caseInsensitiveCompare(text) == .orderedSame }) else { return false }
+    facts = Array((facts + [String(text.prefix(200))]).suffix(factsSize))
+    save()
+    return true
+  }
+
+  /// Forgets the facts that contain `text`; returns how many.
+  @discardableResult
+  public func forgetFact(_ text: String) -> Int {
+    let key = text.trimmingCharacters(in: .whitespacesAndNewlines)
+    guard !key.isEmpty else { return 0 }
+    let before = facts.count
+    facts.removeAll { $0.localizedCaseInsensitiveContains(key) }
+    if facts.count != before { save() }
+    return before - facts.count
+  }
+
+  /// What the models should know beyond the current task.
+  public func memorySummary() -> MemorySummary {
+    MemorySummary(facts: facts, savedTasks: resumableTasks.prefix(8).map(MemorySummary.SavedTask.init))
+  }
+
+  private func archiveCurrent() {
+    guard var current = task else { return }
+    current.updatedAt = current.updatedAt ?? now()
+    archive = Self.inserted(current, into: archive, limit: archiveSize)
+  }
+
+  private static func inserted(_ task: GenioTask, into archive: [GenioTask], limit: Int) -> [GenioTask] {
+    Array(([task] + archive.filter { $0.id != task.id }).prefix(limit))
+  }
+
   private func remember(_ observation: StepObservation) {
     observations = Array((observations + [observation]).suffix(memorySize))
   }
 
   private func save() {
-    store?.save(PersistedTaskState(task: task, paused: paused, observations: observations, savedAt: now()))
+    if var current = task {
+      current.updatedAt = now()
+      task = current
+    }
+    store?.save(PersistedTaskState(task: task, paused: paused, observations: observations, savedAt: now(),
+                                   archive: archive, facts: facts))
   }
 }
 

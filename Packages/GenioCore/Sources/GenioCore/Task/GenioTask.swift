@@ -17,6 +17,8 @@ public struct GenioTask: Equatable, Codable, Sendable {
   /// Changes the user asked for ("I have a different model"), newest last.
   public var userNotes: [String] = []
   public var createdAt = Date()
+  /// Last change (nil in tasks saved by older versions).
+  public var updatedAt: Date?
 
   public init(goal: String, steps: [String]) {
     self.goal = goal

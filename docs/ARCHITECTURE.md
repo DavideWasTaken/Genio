@@ -43,6 +43,8 @@ Models propose, the engine decides. Gemini can call:
 | `propose_step_completion` | about the current step and revision; needs evidence; counted by the verifier |
 | `report_observation` | verdict and kind are valid enums; the engine decides whether the remark is worth saying (`speak`) |
 | `user_confirmed_step`, `go_back_step`, `start_new_task`, `pause_guidance` | the quoted user words must match the microphone transcript of the last 20 s |
+| `list_saved_tasks`, `resume_task` | only unfinished tasks in the archive; resuming bumps the revision and sets the current task aside |
+| `remember_fact`, `forget_fact` | not empty, not a duplicate (case-insensitive), at most 200 characters, 30 facts kept |
 
 All functions are declared `BLOCKING`, so Gemini waits for the engine's answer
 before telling the user a step is done or a plan changed. Refusals explain why,
@@ -133,10 +135,22 @@ in its own voice) only if the engine allows it: hazards at most every 5 s,
 mistakes every 15 s, never a repeat, never `info`. The coach is always on: it
 is what checks the steps; Gemini Live alone rarely looks unprompted.
 
+## Memory
+
+- **Archive.** Starting a new task or saying "new task" moves the current task
+  to an archive (newest first, 20 kept); a finished task goes there too.
+  Unfinished ones can be resumed by id (the first 8 characters of the UUID).
+- **Facts.** Short sentences about the user that Gemini stores with
+  `remember_fact` when the user says something lasting or asks it to remember.
+- Both go into the system instruction at every session start (`MemorySummary`:
+  the facts and up to 8 resumable tasks with their progress), so "let's pick up
+  the bookshelf" works without a tool round trip, and are saved with the task.
+
 ## Persistence and lifecycle
 
-- The task, pause state and recent observations are saved after every change
-  (`Application Support/Genio/task.json`) and restored paused at launch.
+- The task, pause state, recent observations, archive and facts are saved after
+  every change (`Application Support/Genio/task.json`) and the task is restored
+  paused at launch.
 - Glasses disconnected: GENIO switches off, the task stays.
 - Internet lost: the session reconnects with backoff; the task engine and the
   UI keep working; after too many failures GENIO switches off and says why in
@@ -148,8 +162,8 @@ is what checks the steps; Gemini Live alone rarely looks unprompted.
   so iOS does not suspend the app and the capture button still arrives. iOS
   can still terminate the app; nothing more is promised.
 - Settings changes (voice, voice language, coach) apply at the next start.
-- Settings are kept to what a user needs: key, voice, voice language, button
-  press, hardware test, log. The vision coach is always on. Model, coach pace and video rate
+- Settings are kept to what a user needs: key, voice, voice language, the
+  button press that starts GENIO, hardware test, log. The vision coach is always on. Model, coach pace and video rate
   are fixed in code (`LiveConversationEngine.defaultModel`, `Tuning`).
 
 ## Security

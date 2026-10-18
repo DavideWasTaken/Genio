@@ -40,7 +40,7 @@ struct SettingsView: View {
         }
 
         Section {
-          Picker("Start/stop button", selection: $pressType) {
+          Picker("Button to start GENIO", selection: $pressType) {
             Text("Short press").tag("shortPress")
             Text("Double press").tag("doublePress")
             Text("Long press").tag("hold")
@@ -54,7 +54,7 @@ struct SettingsView: View {
         } header: {
           Text("Glasses")
         } footer: {
-          Text("If a short press also takes a photo, pick double or long press.")
+          Text("The glasses' button only starts GENIO: while it runs, the glasses keep the button for photos. To switch off, say \"Genio stop\". If a short press also takes a photo when GENIO is off, pick double or long press.")
         }
 
         Section {

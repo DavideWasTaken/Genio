@@ -83,6 +83,24 @@ final class TaskEngineTests: XCTestCase {
     XCTAssertTrue(restored.paused)
   }
 
+  func testArchiveAndFactsSurviveRestarts() throws {
+    let store = MemoryTaskStore()
+    let engine = makeEngine(store: store)
+    try engine.startTask(goal: "Libreria", steps: fourSteps, strict: true).get()
+    engine.userConfirmedStep()
+    try engine.startTask(goal: "Torta", steps: ["a", "b", "c"], strict: true).get()
+    engine.rememberFact("Ha un trapano Bosch")
+    let restored = makeEngine(store: store)
+    XCTAssertEqual(restored.task?.goal, "Torta")
+    XCTAssertEqual(restored.resumableTasks.map(\.goal), ["Libreria"])
+    XCTAssertEqual(restored.facts, ["Ha un trapano Bosch"])
+    let id = String(restored.resumableTasks[0].id.uuidString.prefix(8))
+    let back = try restored.resumeTask(idPrefix: id).get()
+    XCTAssertEqual(back.current, 1)
+    XCTAssertEqual(restored.resumableTasks.map(\.goal), ["Torta"])
+    guard case .resumed = events.last else { return XCTFail("expected .resumed") }
+  }
+
   func testFinishedTasksAreNotRestored() throws {
     let store = MemoryTaskStore()
     let engine = makeEngine(store: store)

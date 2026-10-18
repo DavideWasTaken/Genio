@@ -4,7 +4,7 @@ import Foundation
 /// it always carries the task as TaskEngine knows it.
 public enum LiveInstructions {
   /// `language`: the conversation language in English ("Italian").
-  public static func system(language: String, snapshot: TaskSnapshot?) -> String {
+  public static func system(language: String, snapshot: TaskSnapshot?, memory: MemorySummary? = nil) -> String {
     var text = """
       You are Genio, a hands-on coach speaking through the user's Ray-Ban Meta glasses. \
       You hear the user and, when the camera is on, see what they see through the glasses (about one frame per second). \
@@ -34,6 +34,11 @@ public enum LiveInstructions {
       - Warnings are cautious ("careful, check that…"): you are not a certified safety device.
       - Messages starting with [Genio] come from the app, not the user: act on them, do not read them out.
       """
+    text += "\n- Memory: remember_fact for lasting facts the user tells you, list_saved_tasks and resume_task "
+      + "when they want to pick up something from before (\"riprendiamo la libreria\")."
+    if let memory, !memory.isEmpty {
+      text += "\n\n" + memory.text
+    }
     if let snapshot {
       text += "\n\nCurrent task:\n" + snapshot.text
     } else {

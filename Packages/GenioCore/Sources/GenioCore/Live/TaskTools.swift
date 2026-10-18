@@ -21,6 +21,10 @@ public final class TaskTools {
     case pauseGuidance = "pause_guidance"
     case turnOnCamera = "turn_on_camera"
     case turnOffCamera = "turn_off_camera"
+    case listSavedTasks = "list_saved_tasks"
+    case resumeTask = "resume_task"
+    case rememberFact = "remember_fact"
+    case forgetFact = "forget_fact"
   }
 
   public let engine: TaskEngine
@@ -116,6 +120,25 @@ public final class TaskTools {
         description: "Turns the glasses camera off when the practical part is over and the conversation no longer needs it, to save battery. A task in progress keeps it on.",
         parameters: nil, behavior: .blocking),
       FunctionDeclaration(
+        name: Name.listSavedTasks.rawValue,
+        description: "Lists earlier tasks that were not finished (set aside with \"new task\", or interrupted), newest first, with their progress and id. Call it when the user wants to pick up something they were doing.",
+        parameters: nil, behavior: .blocking),
+      FunctionDeclaration(
+        name: Name.resumeTask.rawValue,
+        description: "Picks up an earlier unfinished task by its id (from list_saved_tasks or the instruction). The task in progress, if any, is saved for later. Then tell the user where they are.",
+        parameters: .object(properties: [("task_id", .string(description: "The task's id as listed."))], required: ["task_id"]),
+        behavior: .blocking),
+      FunctionDeclaration(
+        name: Name.rememberFact.rawValue,
+        description: "Remembers a lasting fact about the user for future conversations: what they own (\"Bosch washing machine\"), their tools, skill level, preferences. Only when they say it or ask you to remember; never sensitive data.",
+        parameters: .object(properties: [("fact", .string(description: "The fact, one short sentence in the conversation language."))], required: ["fact"]),
+        behavior: .blocking),
+      FunctionDeclaration(
+        name: Name.forgetFact.rawValue,
+        description: "Forgets remembered facts that contain the given words, when the user asks you to forget something or a fact is no longer true.",
+        parameters: .object(properties: [("text", .string(description: "Words that identify the fact."))], required: ["text"]),
+        behavior: .blocking),
+      FunctionDeclaration(
         name: Name.pauseGuidance.rawValue,
         description: "The user asked Genio to stop or pause (\"Genio stop\", \"basta\", \"pausa\"). The task is kept for later. Say a short goodbye.",
         parameters: .object(properties: [("user_words", userWords)], required: ["user_words"]),
@@ -143,6 +166,10 @@ public final class TaskTools {
         engine.pause()
         onPauseRequested?()
       }
+    case .listSavedTasks: result = savedTasks()
+    case .resumeTask: result = resume(call.args)
+    case .rememberFact: result = rememberFact(call.args)
+    case .forgetFact: result = forgetFact(call.args)
     case .turnOnCamera: result = camera(on: true)
     case .turnOffCamera: result = camera(on: false)
     case nil: result = refused("unknown function \(call.name)")
@@ -164,7 +191,7 @@ public final class TaskTools {
     guard let goal = args["goal"]?.stringValue else { return refused("goal is missing") }
     guard let steps = strings(args["steps"]) else { return refused("steps must be a list of strings") }
     if let current = engine.task, !current.finished, args["replace_current"]?.boolValue != true {
-      return refused("a task is in progress (\(current.goal), step \(current.current + 1) of \(current.steps.count)). Ask the user whether to drop it; call again with replace_current true only if they say so.")
+      return refused("a task is in progress (\(current.goal), step \(current.current + 1) of \(current.steps.count)). Ask the user whether to set it aside (it is saved and can be resumed later); call again with replace_current true only if they say so.")
     }
     switch engine.startTask(goal: goal, steps: steps, strict: true) {
     case .success(let task):
@@ -180,6 +207,48 @@ public final class TaskTools {
     case .failure(let error):
       return refused(error.description)
     }
+  }
+
+  private func savedTasks() -> [String: JSONValue] {
+    let summary = engine.memorySummary()
+    guard !summary.savedTasks.isEmpty,
+          let data = try? JSONEncoder().encode(summary.savedTasks),
+          let list = try? JSONSerialization.jsonObject(with: data)
+    else { return ["saved_tasks": .array([]), "instruction": .string("There are no unfinished earlier tasks.")] }
+    return ["saved_tasks": JSONValue(any: list)]
+  }
+
+  private func resume(_ args: JSONValue) -> [String: JSONValue] {
+    guard let id = args["task_id"]?.stringValue else { return refused("task_id is missing") }
+    switch engine.resumeTask(idPrefix: id) {
+    case .success(let task):
+      let cameraOn = cameraIsOn() || onCameraRequest?(true) == true
+      return accepted([
+        "goal": .string(task.goal),
+        "current_step": .number(Double(task.current + 1)),
+        "total_steps": .number(Double(task.steps.count)),
+        "step_text": .string(task.currentStep ?? ""),
+        "camera": .string(cameraOn ? "on" : "unavailable"),
+        "instruction": .string("Task resumed. Tell the user, briefly, which task and the current step."),
+      ])
+    case .failure:
+      return refused("no unfinished task with id \(id). Call list_saved_tasks.")
+    }
+  }
+
+  private func rememberFact(_ args: JSONValue) -> [String: JSONValue] {
+    guard let fact = args["fact"]?.stringValue, !fact.trimmingCharacters(in: .whitespaces).isEmpty else {
+      return refused("fact is missing")
+    }
+    return engine.rememberFact(fact)
+      ? accepted(["instruction": .string("Remembered. Acknowledge in a few words.")])
+      : accepted(["instruction": .string("Already known.")])
+  }
+
+  private func forgetFact(_ args: JSONValue) -> [String: JSONValue] {
+    guard let text = args["text"]?.stringValue else { return refused("text is missing") }
+    let removed = engine.forgetFact(text)
+    return accepted(["forgotten": .number(Double(removed))])
   }
 
   private func camera(on: Bool) -> [String: JSONValue] {

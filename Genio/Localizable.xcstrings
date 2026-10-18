@@ -71,6 +71,16 @@
         }
       }
     },
+    "Button to start GENIO": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Tasto per accendere GENIO"
+          }
+        }
+      }
+    },
     "Call (steadier)": {
       "localizations": {
         "it": {
@@ -311,6 +321,16 @@
         }
       }
     },
+    "Genio is listening. Say \"Genio stop\" to switch off.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Genio ti ascolta. Di' \"Genio stop\" per spegnerlo."
+          }
+        }
+      }
+    },
     "Glasses": {
       "localizations": {
         "it": {
@@ -327,16 +347,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Occhiali non collegati: aprili, indossali e controlla che Meta AI li veda connessi e che il Bluetooth sia acceso."
-          }
-        }
-      }
-    },
-    "If a short press also takes a photo, pick double or long press.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se la pressione breve scatta anche una foto, scegli doppia o lunga."
           }
         }
       }
@@ -601,16 +611,6 @@
         }
       }
     },
-    "Start/stop button": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tasto avvia/ferma"
-          }
-        }
-      }
-    },
     "Step %lld of %lld": {
       "localizations": {
         "it": {
@@ -647,16 +647,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Scatta un fotogramma"
-          }
-        }
-      }
-    },
-    "Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\". Say \"Genio stop\" to switch off.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Parla normalmente: di' cosa stai facendo, chiedi quello che vuoi. \"Fatto\", \"indietro\", \"nuovo compito\". Di' \"Genio stop\" per spegnere."
           }
         }
       }
@@ -721,6 +711,16 @@
         }
       }
     },
+    "The glasses' button only starts GENIO: while it runs, the glasses keep the button for photos. To switch off, say \"Genio stop\". If a short press also takes a photo when GENIO is off, pick double or long press.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tasto degli occhiali serve solo ad accendere GENIO: mentre è attivo, gli occhiali usano il tasto per le foto. Per spegnere di' \"Genio stop\". Se la pressione breve scatta una foto anche con GENIO spento, scegli doppia o lunga."
+          }
+        }
+      }
+    },
     "The microphone could not start.": {
       "localizations": {
         "it": {
@@ -777,16 +777,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "In attesa degli occhiali"
-          }
-        }
-      }
-    },
-    "You": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Tu"
           }
         }
       }

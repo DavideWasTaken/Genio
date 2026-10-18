@@ -1,4 +1,4 @@
-import Foundation
+﻿import Foundation
 import GenioCore
 
 /// The Gemini Live conversation: the glasses' microphone to Gemini, Gemini's
@@ -46,9 +46,9 @@ final class LiveConversationEngine: ObservableObject {
 
   @Published private(set) var status: Status = .off
   /// What the user said in the current turn (input transcription).
-  @Published private(set) var userTranscript = ""
+  private var userTranscript = ""
   /// What Genio is saying (output transcription).
-  @Published private(set) var genioTranscript = ""
+  private var genioTranscript = ""
   @Published private(set) var metrics = Metrics()
   @Published private(set) var isModelSpeaking = false
 
@@ -148,7 +148,8 @@ final class LiveConversationEngine: ObservableObject {
         LiveSetup(
           model: settings.model.isEmpty ? Self.defaultModel : settings.model,
           voiceName: settings.voice.isEmpty ? nil : settings.voice,
-          systemInstruction: LiveInstructions.system(language: settings.languageName, snapshot: engine.snapshot()),
+          systemInstruction: LiveInstructions.system(
+            language: settings.languageName, snapshot: engine.snapshot(), memory: engine.memorySummary()),
           tools: TaskTools.declarations,
           resumptionHandle: handle)
       }
@@ -272,7 +273,7 @@ final class LiveConversationEngine: ObservableObject {
       inToolCall = true
       for call in calls {
         let response = tools.handle(call)
-        onLog?("Tool \(call.name) → \(response.response["status"]?.stringValue ?? "?")")
+        onLog?("Tool \(call.name) â†’ \(response.response["status"]?.stringValue ?? "?")")
         responses.append(response)
       }
       inToolCall = false

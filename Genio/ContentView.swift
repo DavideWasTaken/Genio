@@ -47,7 +47,7 @@ struct ContentView: View {
             } else if genio.active, live.status == .connecting {
               Text("Connecting to Gemini…")
             } else if genio.active {
-              Text("Talk normally: say what you are doing, ask anything. \"Done\", \"back\", \"new task\". Say \"Genio stop\" to switch off.")
+              Text("Genio is listening. Say \"Genio stop\" to switch off.")
             } else if !glassesReady {
               Text("Connect the glasses first: GENIO needs their camera, button and microphone.")
             } else if (Keychain.geminiKey ?? "").isEmpty {
@@ -67,22 +67,6 @@ struct ContentView: View {
             TaskCard(task: task, paused: genio.taskEngine.paused && !genio.active)
           }
 
-          if genio.active, !live.userTranscript.isEmpty || !live.genioTranscript.isEmpty {
-            Card {
-              if !live.userTranscript.isEmpty {
-                Label("You", systemImage: "waveform")
-                  .font(.footnote.weight(.semibold))
-                  .foregroundStyle(.secondary)
-                Text(verbatim: "“\(live.userTranscript.trimmingCharacters(in: .whitespacesAndNewlines))”")
-              }
-              if !live.genioTranscript.isEmpty {
-                Label("Genio", systemImage: "sparkles")
-                  .font(.footnote.weight(.semibold))
-                  .foregroundStyle(Color.genioViolet)
-                Text(verbatim: live.genioTranscript.trimmingCharacters(in: .whitespacesAndNewlines))
-              }
-            }
-          }
         }
         .padding(20)
       }
@@ -270,24 +254,13 @@ struct TaskCard: View {
           .foregroundStyle(.secondary)
         ProgressView(value: Double(min(task.current, task.steps.count)), total: Double(max(task.steps.count, 1)))
           .tint(Color.genioGold)
-      }
-      VStack(alignment: .leading, spacing: 10) {
-        ForEach(Array(task.steps.enumerated()), id: \.offset) { index, step in
-          HStack(alignment: .firstTextBaseline, spacing: 10) {
-            Image(systemName: icon(for: index))
-              .foregroundStyle(index < task.current ? Color.green : (index == task.current ? Color.genioViolet : Color.secondary))
-            Text(verbatim: step)
-              .font(index == task.current ? .body.weight(.semibold) : .body)
-              .foregroundStyle(index <= task.current ? Color.primary : Color.secondary)
-          }
+        // Only the step at hand: the rest is Genio's job.
+        if let step = task.currentStep {
+          Text(verbatim: step)
+            .font(.body.weight(.semibold))
+            .padding(.top, 2)
         }
       }
     }
-  }
-
-  private func icon(for index: Int) -> String {
-    if index < task.current { return "checkmark.circle.fill" }
-    if index == task.current { return "arrow.right.circle.fill" }
-    return "circle"
   }
 }

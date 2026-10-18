@@ -6,12 +6,19 @@ public struct PersistedTaskState: Codable, Equatable, Sendable {
   public var paused: Bool
   public var observations: [StepObservation]
   public var savedAt: Date
+  /// Earlier tasks, newest first: unfinished ones can be resumed.
+  public var archive: [GenioTask]?
+  /// What Genio remembers about the user ("has a Bosch washing machine").
+  public var facts: [String]?
 
-  public init(task: GenioTask?, paused: Bool, observations: [StepObservation], savedAt: Date) {
+  public init(task: GenioTask?, paused: Bool, observations: [StepObservation], savedAt: Date,
+              archive: [GenioTask]? = nil, facts: [String]? = nil) {
     self.task = task
     self.paused = paused
     self.observations = observations
     self.savedAt = savedAt
+    self.archive = archive
+    self.facts = facts
   }
 }
 

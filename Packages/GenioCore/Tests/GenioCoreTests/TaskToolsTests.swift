@@ -158,6 +158,40 @@ final class TaskToolsTests: XCTestCase {
     XCTAssertTrue(cameraOn)
   }
 
+  func testSavedTasksAndResume() {
+    plan()
+    _ = call(.userConfirmedStep, ["step_number": 1, "user_words": "fatto"])  // not heard: refused
+    heard = "fatto"
+    _ = call(.userConfirmedStep, ["step_number": 1, "user_words": "fatto"])
+    XCTAssertEqual(engine.task?.current, 1)
+    heard = "nuovo compito"
+    _ = call(.startNewTask, ["user_words": "nuovo compito"])
+    XCTAssertNil(engine.task)
+
+    let list = call(.listSavedTasks)
+    let first = list["saved_tasks"]?.arrayValue?.first
+    XCTAssertEqual(first?["goal"], .string("Pulire il filtro"))
+    XCTAssertEqual(first?["progress"], .string("step 2 of 4"))
+    let id = first?["task_id"]?.stringValue ?? ""
+    XCTAssertEqual(id.count, 8)
+
+    XCTAssertEqual(call(.resumeTask, ["task_id": "zzzz"])["status"], .string("refused"))
+    let resumed = call(.resumeTask, ["task_id": id])
+    XCTAssertEqual(resumed["status"], .string("accepted"))
+    XCTAssertEqual(resumed["current_step"]?.intValue, 2)
+    XCTAssertEqual(engine.task?.goal, "Pulire il filtro")
+    XCTAssertEqual(call(.listSavedTasks)["saved_tasks"]?.arrayValue?.count, 0)
+  }
+
+  func testRememberedFacts() {
+    XCTAssertEqual(call(.rememberFact, ["fact": "Ha una lavatrice Bosch"])["status"], .string("accepted"))
+    _ = call(.rememberFact, ["fact": "ha una lavatrice bosch"])
+    XCTAssertEqual(engine.facts, ["Ha una lavatrice Bosch"])
+    XCTAssertTrue(LiveInstructions.system(language: "Italian", snapshot: nil, memory: engine.memorySummary()).contains("Bosch"))
+    XCTAssertEqual(call(.forgetFact, ["text": "bosch"])["forgotten"]?.intValue, 1)
+    XCTAssertTrue(engine.facts.isEmpty)
+  }
+
   func testHeardMatching() {
     XCTAssertTrue(TaskTools.saidRecently("Fatto!", in: "ok... FATTO"))
     XCTAssertTrue(TaskTools.saidRecently("torna indietro", in: "torna un attimo indietro"))
