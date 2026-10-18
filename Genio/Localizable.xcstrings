@@ -241,12 +241,12 @@
         }
       }
     },
-    "Double press": {
+    "Double": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Doppia pressione"
+            "value": "Doppia"
           }
         }
       }
@@ -421,12 +421,12 @@
         }
       }
     },
-    "Long press": {
+    "Long": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pressione lunga"
+            "value": "Lunga"
           }
         }
       }
@@ -561,12 +561,12 @@
         }
       }
     },
-    "Short press": {
+    "Short": {
       "localizations": {
         "it": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pressione breve"
+            "value": "Breve"
           }
         }
       }
@@ -671,6 +671,16 @@
         }
       }
     },
+    "The button only starts GENIO; to switch off, say \"Genio stop\". If a short press also takes a photo, pick double or long.": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Il tasto serve solo ad accendere GENIO; per spegnerlo di' \"Genio stop\". Se la pressione breve scatta anche una foto, scegli doppia o lunga."
+          }
+        }
+      }
+    },
     "The camera turns on only when Genio needs to see, or while this page is open, to save the glasses' battery.": {
       "localizations": {
         "it": {
@@ -707,16 +717,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Va aggiornato il software degli occhiali."
-          }
-        }
-      }
-    },
-    "The glasses' button only starts GENIO: while it runs, the glasses keep the button for photos. To switch off, say \"Genio stop\". If a short press also takes a photo when GENIO is off, pick double or long press.": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Il tasto degli occhiali serve solo ad accendere GENIO: mentre è attivo, gli occhiali usano il tasto per le foto. Per spegnere di' \"Genio stop\". Se la pressione breve scatta una foto anche con GENIO spento, scegli doppia o lunga."
           }
         }
       }

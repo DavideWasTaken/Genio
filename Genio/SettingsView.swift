@@ -40,11 +40,17 @@ struct SettingsView: View {
         }
 
         Section {
-          Picker("Button to start GENIO", selection: $pressType) {
-            Text("Short press").tag("shortPress")
-            Text("Double press").tag("doublePress")
-            Text("Long press").tag("hold")
+          VStack(alignment: .leading, spacing: 10) {
+            Text("Button to start GENIO")
+            Picker("Button to start GENIO", selection: $pressType) {
+              Text("Short").tag("shortPress")
+              Text("Double").tag("doublePress")
+              Text("Long").tag("hold")
+            }
+            .pickerStyle(.segmented)
+            .labelsHidden()
           }
+          .padding(.vertical, 4)
           NavigationLink {
             HardwareTestView(genio: genio, glasses: glasses, audio: genio.audio)
           } label: {
@@ -54,7 +60,7 @@ struct SettingsView: View {
         } header: {
           Text("Glasses")
         } footer: {
-          Text("The glasses' button only starts GENIO: while it runs, the glasses keep the button for photos. To switch off, say \"Genio stop\". If a short press also takes a photo when GENIO is off, pick double or long press.")
+          Text("The button only starts GENIO; to switch off, say \"Genio stop\". If a short press also takes a photo, pick double or long.")
         }
 
         Section {
