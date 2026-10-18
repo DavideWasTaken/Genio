@@ -245,7 +245,11 @@ final class GenioController: ObservableObject {
 
   /// A short line in the iOS voice, for when Gemini cannot speak.
   private func speakFallback(_ line: VoiceLanguage.Line) {
-    voice.configure(route: .media)
+    // Inside the standby session when the glasses are connected: it is
+    // mixable, so it also works from the background (a fresh, non-mixable
+    // session would be refused there).
+    restoreIdleAudio()
+    if audio.mode != .standby { voice.configure(route: .media) }
     let text = language.say(line)
     note("Genio: \(text)")
     let code = language.voiceCode
