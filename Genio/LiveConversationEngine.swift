@@ -76,6 +76,8 @@ final class LiveConversationEngine: ObservableObject {
   /// Bumped by stop(): a start() still waiting (microphone permission,
   /// audio setup) sees it changed and gives up.
   private var startGeneration = 0
+  /// Language of the current session, for the greeting.
+  private var languageName = "Italian"
   /// Genio finished its turn: its next words start a new transcript.
   private var genioTurnEnded = true
   /// The user's words were answered: their next words start a new one.
@@ -110,6 +112,7 @@ final class LiveConversationEngine: ObservableObject {
     startGeneration += 1
     let myStart = startGeneration
     status = .connecting
+    languageName = settings.languageName
     let (stream, continuation) = AsyncStream<Data>.makeStream(bufferingPolicy: .bufferingNewest(64))
     micContinuation = continuation
     audio.onMicrophonePCM = { pcm in continuation.yield(pcm) }
@@ -280,7 +283,12 @@ final class LiveConversationEngine: ObservableObject {
     case .ready:
       if status != .live { onLog?("Gemini Live: connected") }
       status = .live
-      connectedSince = connectedSince ?? Date()
+      if connectedSince == nil {
+        // First connection of this session: the fixed greeting, once.
+        connectedSince = Date()
+        let text = LiveInstructions.greeting(language: languageName)
+        if let session { Task { await session.sendText(text) } }
+      }
     case .reconnecting(let attempt):
       status = .reconnecting(attempt)
       audio.flushVoice()

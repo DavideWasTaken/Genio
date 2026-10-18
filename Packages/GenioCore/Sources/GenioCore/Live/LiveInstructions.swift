@@ -33,9 +33,19 @@ public enum LiveInstructions {
     if let snapshot {
       text += "\n\nCurrent task:\n" + snapshot.text
     } else {
-      text += "\n\nNo task in progress yet: greet the user in a few words and ask what they are working on."
+      text += "\n\nNo task in progress yet: wait for the user to say what they are working on."
     }
     return text
+  }
+
+  /// The one line Genio says when a session starts, and nothing else.
+  public static func greetingLine(language: String) -> String {
+    language == "Italian" ? "Ciao, sono Genio." : "Hi, I'm Genio."
+  }
+
+  /// Sent right after the session connects (not after reconnects).
+  public static func greeting(language: String) -> String {
+    "[Genio] The session just started. Say exactly \"\(greetingLine(language: language))\" and nothing else, then wait in silence for the user."
   }
 
   /// Told to the model after a reconnect that lost the conversation.
