@@ -1,8 +1,8 @@
 import Foundation
 
 /// A line for the in-app Log (Settings → Diagnostics; also printed to the
-/// Xcode console) from code that has no handle on the controller, such as
-/// the ChatGPT sign-in. Safe from any thread or actor.
+/// Xcode console) from code that has no handle on the controller. Safe from
+/// any thread or actor.
 enum GenioLog {
   static let notification = Notification.Name("GenioLog")
 
