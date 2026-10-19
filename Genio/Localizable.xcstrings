@@ -511,6 +511,16 @@
         }
       }
     },
+    "Paused, press to resume": {
+      "localizations": {
+        "it": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "In pausa, premi per riprendere"
+          }
+        }
+      }
+    },
     "Press the button on your glasses or tap here.": {
       "localizations": {
         "it": {
@@ -607,26 +617,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avvia la prova audio"
-          }
-        }
-      }
-    },
-    "Step %lld of %lld": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passo %lld di %lld"
-          }
-        }
-      }
-    },
-    "Step %lld of %lld · paused, press to resume": {
-      "localizations": {
-        "it": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Passo %lld di %lld · in pausa, premi per riprendere"
           }
         }
       }

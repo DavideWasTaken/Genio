@@ -27,7 +27,7 @@
 - **It checks your work.** A step moves on when you say so, or when the camera shows it done *consistently*. Genio keeps looking while you work in silence, so you don't have to say "done". One look is never enough: Genio would rather wait a few seconds than skip a step you haven't finished. A separate vision coach (a fast Gemini model) looks every few seconds and points out clear mistakes or hazards, cautiously. Silence is the default.
 - **It remembers.** Say "new task" and the old one is set aside, not lost: "let's pick up the bookshelf" resumes it at the step you left. Tell Genio lasting things ("I have a Bosch washing machine", "I'm left-handed") and it remembers them in later conversations; "forget the washing machine" removes them. All of it stays on the phone.
 - **Google Search built in.** Gemini searches the web when the answer depends on current facts (a match score, opening hours, news) or on the manual and specs of the exact model in front of you.
-- **A quiet screen.** The phone shows only what matters: GENIO's state, the glasses and, during a task, the step at hand. The conversation happens in your ears.
+- **A quiet screen.** The phone shows only what matters: GENIO's state, the glasses and, during a task, its name. The steps, like the rest of the conversation, happen in your ears.
 - **English and Italian.** The app's screens follow your iPhone's language; the voice language is set in the app.
 - **No server.** The app talks straight to the glasses (Meta Wearables DAT SDK) and to Google's Gemini API. The API key stays in the iPhone's keychain.
 

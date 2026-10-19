@@ -72,8 +72,8 @@ public enum LiveInstructions {
   public static func cameraReady(userRequest: String) -> String {
     let request = userRequest.trimmingCharacters(in: .whitespacesAndNewlines)
     let quoted = request.isEmpty ? "" : " (they said: \"\(request.suffix(300))\")"
-    return "[Genio] The camera is on now and you can see. Answer what the user asked\(quoted) right away, "
-      + "using what you see. Do not say again that the camera is on."
+    return "[Genio] The camera is on now and you can see. Answer the user's latest request\(quoted) right away, "
+      + "out loud, using what you see. Do not say again that the camera is on, and do not wait for the user to ask again."
   }
 
   /// The camera Gemini asked for never delivered a frame.

@@ -241,24 +241,15 @@ struct TaskCard: View {
       VStack(alignment: .leading, spacing: 6) {
         Text(verbatim: task.goal)
           .font(.headline)
-        Group {
-          if task.finished {
-            Text("Done")
-          } else if paused {
-            Text("Step \(task.current + 1) of \(task.steps.count) · paused, press to resume")
-          } else {
-            Text("Step \(task.current + 1) of \(task.steps.count)")
-          }
-        }
-          .font(.subheadline)
-          .foregroundStyle(.secondary)
-        ProgressView(value: Double(min(task.current, task.steps.count)), total: Double(max(task.steps.count, 1)))
-          .tint(Color.genioGold)
-        // Only the step at hand: the rest is Genio's job.
-        if let step = task.currentStep {
-          Text(verbatim: step)
-            .font(.body.weight(.semibold))
-            .padding(.top, 2)
+        // Only the task: the steps are Genio's job, in your ears.
+        if task.finished {
+          Text("Done")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
+        } else if paused {
+          Text("Paused, press to resume")
+            .font(.subheadline)
+            .foregroundStyle(.secondary)
         }
       }
     }

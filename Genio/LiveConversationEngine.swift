@@ -88,7 +88,14 @@ final class LiveConversationEngine: ObservableObject {
   private(set) var lastFailureWasAudio = false
   /// Gemini turned the camera on: once a frame has been sent it is told to
   /// answer, instead of waiting for the user to repeat the question.
-  private var cameraFollowUp: (requestedAt: Date, request: String)?
+  private var cameraFollowUp: Date?
+  /// Genio's current turn already said it turns the camera on (acted on once).
+  private var cameraPhraseHeard = false
+  /// Genio's turn is still open (audio came, turnComplete not yet), and
+  /// when its last audio arrived: together with the playback queue they
+  /// say whether Genio is speaking.
+  private var modelTurnOpen = false
+  private var lastModelAudio: Date?
   /// When the last camera frame went to Gemini.
   private var lastFrameSent: Date?
   /// Looks at the current step while the user is quiet.
@@ -255,12 +262,18 @@ final class LiveConversationEngine: ObservableObject {
       guard !checkMuted else { break }  // a silent check's reply
       audio.playVoice(pcm24k: pcm)
       isModelSpeaking = true
+      modelTurnOpen = true
+      lastModelAudio = Date()
       lastSpeech = Date()
     case .interrupted:
       // The user started talking: stop Genio's voice at once.
       audio.flushVoice()
+      modelTurnOpen = false
       isModelSpeaking = false
     case .turnComplete, .generationComplete:
+      // The voice may still be playing: refreshSpeaking() clears
+      // isModelSpeaking once the queue has drained.
+      modelTurnOpen = false
       isModelSpeaking = audio.isPlayingVoice
       if event == .turnComplete, !genioTurnEnded {
         genioTurnEnded = true
@@ -278,11 +291,9 @@ final class LiveConversationEngine: ObservableObject {
       heard.append((Date(), text))
       lastSpeech = Date()
       checkMutedUntil = nil
-      // The user spoke again after the camera request: their new words get
-      // answered as usual.
-      if let followUp = cameraFollowUp, Date().timeIntervalSince(followUp.requestedAt) > 1.5 {
-        cameraFollowUp = nil
-      }
+      // A pending camera follow-up stays: the transcript of the request
+      // itself often arrives after the call, and the follow-up quotes the
+      // latest words anyway.
       // "Genio stop" switches off directly, whatever the model does.
       if !stopHeard, VoiceStop.matches(userTranscript) {
         stopHeard = true
@@ -299,20 +310,30 @@ final class LiveConversationEngine: ObservableObject {
       if genioTurnEnded {
         genioTranscript = ""
         genioTurnEnded = false
+        cameraPhraseHeard = false
       }
       genioTranscript += text
+      // Genio said "accendo la fotocamera" without calling turn_on_camera:
+      // the app turns it on, so the words are never left unkept.
+      if !cameraPhraseHeard, CameraPhrase.announcesCameraOn(genioTranscript) {
+        cameraPhraseHeard = true
+        if cameraFollowUp == nil, !glasses.cameraActive, cameraControl?(true) == true {
+          onLog?("Genio said it turns the camera on: turning it on")
+          cameraFollowUp = Date()
+        }
+      }
     case .toolCall(let calls):
       var responses: [FunctionResponse] = []
       inToolCall = true
       for call in calls {
         let response = tools.handle(call)
         if call.name == TaskTools.Name.turnOnCamera.rawValue, response.response["camera"]?.stringValue == "starting" {
-          cameraFollowUp = (Date(), recentSpeech())
+          cameraFollowUp = cameraFollowUp ?? Date()
         }
         if response.response["advanced"] == .bool(true) || response.response["speak"] == .bool(true) {
           checkMutedUntil = nil  // something worth saying
         }
-        onLog?("Tool \(call.name) â†’ \(response.response["status"]?.stringValue ?? "?")")
+        onLog?("Tool \(call.name) → \(response.response["status"]?.stringValue ?? "?")")
         responses.append(response)
       }
       inToolCall = false
@@ -344,6 +365,7 @@ final class LiveConversationEngine: ObservableObject {
     case .reconnecting(let attempt):
       status = .reconnecting(attempt)
       audio.flushVoice()
+      modelTurnOpen = false
     case .stopped:
       status = .off
     case .failed(let reason):
@@ -366,6 +388,7 @@ final class LiveConversationEngine: ObservableObject {
     // alive while the microphone is open.
     guard let session, status == .live else { return }
     if let since = connectedSince { metrics.connectedSeconds = Date().timeIntervalSince(since) }
+    refreshSpeaking()
     defer { proactiveTick() }
     guard pacer.decide(frameTime: glasses.latestFrameTime, now: Date()) == .send else {
       syncMetrics(session)
@@ -386,15 +409,18 @@ final class LiveConversationEngine: ObservableObject {
   private func proactiveTick() {
     guard let session, status == .live, !inToolCall else { return }
     let now = Date()
-    let speaking = isModelSpeaking || audio.isPlayingVoice
-    if let followUp = cameraFollowUp {
-      if let frame = lastFrameSent, frame > followUp.requestedAt {
-        guard !speaking else { return }  // let "turning the camera on" finish
+    let speaking = isModelSpeaking
+    if let requestedAt = cameraFollowUp {
+      if let frame = lastFrameSent, frame > requestedAt {
+        // Let "turning the camera on" start and finish first.
+        guard !speaking, now.timeIntervalSince(requestedAt) > 2 else { return }
         cameraFollowUp = nil
         onLog?("Camera ready: Gemini answers")
         lastSpeech = now
-        sendAppText(LiveInstructions.cameraReady(userRequest: followUp.request))
-      } else if now.timeIntervalSince(followUp.requestedAt) > 10 {
+        // The words from just before the request to now: the question, and
+        // anything the user added while the camera started.
+        sendAppText(LiveInstructions.cameraReady(userRequest: speech(since: requestedAt.addingTimeInterval(-20))))
+      } else if now.timeIntervalSince(requestedAt) > Self.cameraStartTimeout {
         cameraFollowUp = nil
         onLog?("Camera did not start")
         sendAppText(LiveInstructions.cameraFailed)
@@ -411,6 +437,19 @@ final class LiveConversationEngine: ObservableObject {
     Task { await session.sendText(LiveInstructions.stepCheck(step: task.current + 1, text: text)) }
   }
 
+  /// Long enough for GlassesManager to restart a camera that hangs on start.
+  private static let cameraStartTimeout: TimeInterval = 20
+
+  /// Genio is speaking while its turn is open or its voice still plays.
+  /// turnComplete usually arrives before the voice has finished playing, so
+  /// this is checked again on every tick; a turn whose audio stopped coming
+  /// without a turnComplete (lost on a reconnect) counts as over after 3 s.
+  private func refreshSpeaking() {
+    let turnOpen = modelTurnOpen && lastModelAudio.map { Date().timeIntervalSince($0) < 3 } == true
+    let speaking = turnOpen || audio.isPlayingVoice
+    if isModelSpeaking != speaking { isModelSpeaking = speaking }
+  }
+
   private func syncMetrics(_ session: GeminiLiveSession) {
     metrics.framesSent = pacer.metrics.sent
     metrics.framesDropped = pacer.metrics.droppedStale + pacer.metrics.droppedBusy + pacer.metrics.failed
@@ -420,9 +459,14 @@ final class LiveConversationEngine: ObservableObject {
   // MARK: - Helpers
 
   private func recentSpeech() -> String {
-    let cutoff = Date().addingTimeInterval(-20)
+    speech(since: Date().addingTimeInterval(-20))
+  }
+
+  /// What the user said since `start` (kept for a minute).
+  private func speech(since start: Date) -> String {
+    let cutoff = Date().addingTimeInterval(-60)
     heard.removeAll { $0.0 < cutoff }
-    return heard.map(\.1).joined(separator: " ")
+    return heard.filter { $0.0 >= start }.map(\.1).joined(separator: " ")
   }
 
   private func cleanUp() {
@@ -445,6 +489,9 @@ final class LiveConversationEngine: ObservableObject {
     userTurnEnded = true
     genioTurnEnded = true
     cameraFollowUp = nil
+    cameraPhraseHeard = false
+    modelTurnOpen = false
+    lastModelAudio = nil
     lastFrameSent = nil
     stepChecks = StepCheckPolicy()
     checkMutedUntil = nil

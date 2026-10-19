@@ -351,10 +351,26 @@ final class GlassesManager: ObservableObject {
         }
       }.store(in: tokens)
       newCamera.stream.start()
+      watchStart(of: newCamera, on: session)
     } catch {
       status = .failed(String(localized: "Camera: \(error.localizedDescription)"))
     }
   }
+
+  /// A start can hang, or stop before streaming, without an error: the
+  /// camera then looks on to `setCamera` and never sends a frame. If someone
+  /// needs it and no frame came in time, it is restarted.
+  private func watchStart(of newCamera: Camera, on session: DeviceSession) {
+    let startedAt = Date()
+    Task { [weak self] in
+      try? await Task.sleep(for: .seconds(Self.cameraStartTimeout))
+      guard let self, self.camera === newCamera, !self.cameraUsers.isEmpty else { return }
+      if let frame = self.latestFrameTime, frame >= startedAt { return }
+      self.restartCamera(on: session, reason: "no frame after \(Int(Self.cameraStartTimeout)) s")
+    }
+  }
+
+  private static let cameraStartTimeout: TimeInterval = 7
 
   /// Brings the camera stream back after an error (such as
   /// videoStreamingError) or an unexpected stop, so Gemini and the coach
@@ -371,6 +387,9 @@ final class GlassesManager: ObservableObject {
     }
     guard cameraRestarts < 5 else {
       log("Camera: gave up after 5 restarts (\(reason)). Disconnect and connect the glasses again.")
+      // Off, not left half-started: the next request starts it afresh.
+      pauseCamera(reason: "gave up")
+      cameraRestarts = 0
       return
     }
     cameraRestarts += 1
@@ -392,7 +411,10 @@ final class GlassesManager: ObservableObject {
   /// streams while anyone needs it and pauses when nobody does.
   func setCamera(needed: Bool, by user: String) {
     if needed { cameraUsers.insert(user) } else { cameraUsers.remove(user) }
-    guard let session, status == .connected else { return }
+    guard let session, status == .connected else {
+      if needed { log("Camera: wanted by \(user), but the glasses are not connected") }
+      return
+    }
     if !cameraUsers.isEmpty, camera == nil, !cameraRestarting {
       log("Camera: on (\(cameraUsers.sorted().joined(separator: ", ")))")
       attachCamera(to: session)

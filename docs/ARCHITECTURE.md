@@ -114,8 +114,13 @@ starts with the camera off; Gemini turns it on with `turn_on_camera` when the
 user asks for something practical (it says "Accendo la fotocamera" to cover
 the start-up second). Gemini then stops talking: as soon as the first frame
 has been sent, the app tells it (`LiveInstructions.cameraReady`, with the
-user's request) and it answers, so the user never repeats the question; after
-10 s without a frame it is told the camera did not start. `create_task_plan`
+user's latest words) and it answers, so the user never repeats the question;
+after 20 s without a frame it is told the camera did not start. If Genio says
+it turns the camera on without calling the function (`CameraPhrase`), the app
+turns it on itself. A camera start that sends no frame within 7 s is
+restarted. Genio counts as speaking until its voice has finished playing,
+not just until Gemini's turn is complete, so the follow-up waits for the
+end of "Accendo la fotocamera" and never longer. `create_task_plan`
 turns the camera on for the coach, and it goes
 off when the task ends or with `turn_off_camera` (refused while a task is in
 progress). The camera test turns it on while its page is open. When the

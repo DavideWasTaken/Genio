@@ -244,3 +244,23 @@ final class VoiceStopTests: XCTestCase {
     XCTAssertFalse(VoiceStop.matches("genio"))
   }
 }
+
+final class CameraPhraseTests: XCTestCase {
+  func testGenioSayingItTurnsTheCameraOn() {
+    XCTAssertTrue(CameraPhrase.announcesCameraOn("Accendo la fotocamera."))
+    XCTAssertTrue(CameraPhrase.announcesCameraOn("Va bene, accendo subito la fotocamera e guardo."))
+    XCTAssertTrue(CameraPhrase.announcesCameraOn("Un attimo, attivo la camera"))
+    XCTAssertTrue(CameraPhrase.announcesCameraOn("Sto accendendo la telecamera"))
+    XCTAssertTrue(CameraPhrase.announcesCameraOn("OK, turning on the camera."))
+    XCTAssertTrue(CameraPhrase.announcesCameraOn("Let me switch the camera on"))
+  }
+
+  func testOtherSentences() {
+    XCTAssertFalse(CameraPhrase.announcesCameraOn("Spengo la fotocamera"))
+    XCTAssertFalse(CameraPhrase.announcesCameraOn("Accendo la luce in camera"), "camera as a room, too far")
+    XCTAssertFalse(CameraPhrase.announcesCameraOn("Turning the camera off now"))
+    XCTAssertFalse(CameraPhrase.announcesCameraOn("Turn the screw, then check the camera"))
+    XCTAssertFalse(CameraPhrase.announcesCameraOn("La fotocamera è accesa"))
+    XCTAssertFalse(CameraPhrase.announcesCameraOn(""))
+  }
+}
