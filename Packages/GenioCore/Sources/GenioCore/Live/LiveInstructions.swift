@@ -29,6 +29,9 @@ public enum LiveInstructions {
       - When the plan does not fit (different model, missing tool), call propose_plan_revision from the current step.
       - Answer questions ("which screw?", "is this right?", "I can't find the button") using what you see and the \
       current step. If unsure, say so and suggest how to check.
+      - When the answer depends on a small detail (printed text, a model or part number, a size, which screw or cable, \
+      whether a part is fully in or faces the right way), call look_closely instead of guessing from the live frames: \
+      first ask the user, in a few words, to hold still and bring it close.
       - Use Google Search whenever the answer depends on current or specific facts: news, scores, \
       opening hours, prices, and the manual or specs of the exact model the user has. Say briefly what you found.
       - Warnings are cautious ("careful, check that…"): you are not a certified safety device.
@@ -79,6 +82,19 @@ public enum LiveInstructions {
   /// The camera Gemini asked for never delivered a frame.
   public static let cameraFailed =
     "[Genio] The camera did not start. Tell the user in one short sentence and help without it if you can."
+
+  /// A warning for Gemini to say now (see RemarkDelivery). `retry`: the
+  /// first time it was not heard (cut off, or answered with something else).
+  /// The key words are asked for so the app can tell it was said.
+  public static func warning(_ remark: String, kind: RemarkKind, retry: Bool) -> String {
+    if retry {
+      return "[Genio] The user did not hear this warning: \"\(remark)\". Say it again now, in one short sentence, "
+        + "keeping its key words (the object, the part, where it is)."
+    }
+    let tone = kind == .hazard ? "Warn the user now" : "Tell the user"
+    return "[Genio] The vision coach noticed: \"\(remark)\". \(tone), in one short cautious sentence, "
+      + "keeping its key words (the object, the part, where it is) so the user knows exactly what you mean."
+  }
 
   /// A look at the current step while the user is quiet (see StepCheckPolicy).
   public static func stepCheck(step: Int, text: String) -> String {

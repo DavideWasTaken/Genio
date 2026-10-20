@@ -40,6 +40,9 @@ key in Settings.
 - [ ] Look away / cover the camera while a step is unfinished: no advance.
 - [ ] Do a step wrong (wrong part, wrong orientation): a short, cautious warning; not repeated every few seconds.
 - [ ] Questions: "quale vite devo usare?", "è giusto così?", "non trovo il pulsante": answers use what the camera shows.
+- [ ] Close look: "cosa c'è scritto sull'etichetta?" on a small label. Genio asks you to hold still, the Log shows "Close look: photo requested", then "Close look: photo … KB" (or "using the sharpest frame") and the answer; Genio reads the text exactly. The video stream goes on afterwards (frames sent keeps growing, no camera restart).
+- [ ] Close look on something unreadable (too far, dark): Genio says it cannot see it well and how to show it better, instead of guessing.
+- [ ] Warnings: while Genio is warning you about a mistake, talk over it. The Log shows "Warning not heard, saying it again" and Genio repeats it once when you stop; a warning Genio did say shows "Warning heard".
 - [ ] "Ho un modello diverso" / "non ho quell'attrezzo": the remaining steps change (task card updates); completed steps stay.
 - [ ] Stay silent and keep working on a long step: Genio stays quiet (no narration).
 - [ ] "Nuovo compito": the task is dropped and Genio asks what's next.
@@ -70,3 +73,4 @@ key in Settings.
 - Glasses firmware that drops HFP while DAT streams video (section 1, last item).
 - The phone's microphone used instead of the glasses' (orange warning on the main screen).
 - Echo with voice processing unavailable (Log: "voice processing unavailable").
+- A photo taken while the stream runs (close look) pausing the stream or raising streaming errors on some firmware (Log: "Camera: restarting" right after "Close look: photo requested"). The close look then falls back to the sharpest frame.

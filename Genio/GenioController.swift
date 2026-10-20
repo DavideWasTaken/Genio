@@ -75,6 +75,9 @@ final class GenioController: ObservableObject {
       self.glasses.setCamera(needed: on, by: "genio")
       return true
     }
+    live.closeLook = { [weak self] question in
+      await self?.closeLook(question) ?? .failed("not available")
+    }
     call.onLog = { [weak self] line in self?.note(line) }
     // The user hung up from the Dynamic Island or the lock screen.
     call.onEndedBySystem = { [weak self] in self?.stop() }
@@ -246,6 +249,26 @@ final class GenioController: ObservableObject {
       note("Coach model: \(model)")
     }
     return GeminiVisionCoach(apiKey: key, model: model, languageName: language.promptName)
+  }
+
+  /// look_closely: a sharp still from the glasses, looked at by the coach's
+  /// vision model at high resolution.
+  private func closeLook(_ question: String) async -> TaskTools.CloseLookResult {
+    guard let image = await glasses.closeLookImage() else {
+      note("Close look: no image")
+      return .noImage
+    }
+    guard let coach = await visionCoach() else { return .failed("no Gemini API key") }
+    let looker = GeminiCloseLook(apiKey: coach.apiKey, model: coach.model, languageName: coach.languageName)
+    note("Close look (\(image.source), \(image.data.count / 1024) KB): \(question)")
+    do {
+      let found = try await looker.look(image: image.data, question: question, goal: task?.goal, step: task?.currentStep)
+      note("Close look: \(found.confident ? "" : "not sure, ")\(found.answer)")
+      return .answer(found, source: image.source)
+    } catch {
+      note("Close look: \(error.localizedDescription)")
+      return .failed(error.localizedDescription)
+    }
   }
 
   // MARK: - Helpers

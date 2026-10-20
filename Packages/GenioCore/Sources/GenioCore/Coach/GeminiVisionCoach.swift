@@ -153,6 +153,14 @@ public struct GeminiVisionCoach: Sendable {
   }
 
   public static func parse(_ data: Data) throws -> CoachVerdict {
+    let text = try answerText(data)
+    guard let verdict = try? JSONDecoder().decode(CoachVerdict.self, from: Data(text.utf8)) else { throw GeminiError.badResponse }
+    return verdict
+  }
+
+  /// The JSON text of a generateContent answer: thoughts skipped, a fenced
+  /// block unwrapped.
+  static func answerText(_ data: Data) throws -> String {
     guard let root = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { throw GeminiError.badResponse }
     guard let candidate = (root["candidates"] as? [[String: Any]])?.first else {
       let reason = ((root["promptFeedback"] as? [String: Any])?["blockReason"] as? String) ?? "no candidates"
@@ -167,8 +175,7 @@ public struct GeminiVisionCoach: Sendable {
     guard !text.isEmpty else {
       throw GeminiError.blocked(candidate["finishReason"] as? String ?? "empty")
     }
-    guard let verdict = try? JSONDecoder().decode(CoachVerdict.self, from: Data(text.utf8)) else { throw GeminiError.badResponse }
-    return verdict
+    return text
   }
 
   static func errorMessage(_ data: Data) -> String {

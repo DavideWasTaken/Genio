@@ -6,11 +6,12 @@ ears, eyes and a voice; the task engine keeps it on the task.
 ## Components
 
 ```
-GenioController ─┬─ GlassesManager        DAT SDK: session, camera (latest frame), capture button
+GenioController ─┬─ GlassesManager        DAT SDK: session, camera (latest frame, photos), capture button
                  ├─ AudioManager          audio session + engine (the only one)
                  ├─ LiveConversationEngine ── GeminiLiveSession (GenioCore) ── WebSocket
                  │                          └─ TaskTools (GenioCore) ── TaskEngine
                  ├─ CoachEngine ── GeminiVisionCoach (GenioCore) ── REST
+                 ├─ (look_closely) ── GeminiCloseLook (GenioCore) ── REST
                  └─ TaskEngine (GenioCore) ── FileTaskStore
 ```
 
@@ -26,9 +27,11 @@ so it builds and tests on macOS (`swift test`):
 | `LiveMessages` | the Live API wire format (setup, realtimeInput, toolResponse; server events) |
 | `GeminiLiveSession` | an actor: one WebSocket at a time, resumption, goAway, backoff, once-only tool calls |
 | `TaskTools` | function declarations for Gemini and their validation against the engine |
-| `LiveInstructions` | the system instruction (with the task), context recovery, app events |
+| `LiveInstructions` | the system instruction (with the task), context recovery, app events, warnings |
+| `RemarkDelivery` | keeps a warning until Genio's words show it was said; resends it once |
 | `GeminiVisionCoach` | the coach's generateContent request/response and model choice |
-| `FramePacer`, `PCM` | video sampling policy; 16-bit PCM conversion |
+| `GeminiCloseLook` | the close look's generateContent request/response (high media resolution) |
+| `FramePacer`, `PCM`, `Sharpness` | video sampling policy; 16-bit PCM conversion; picking the sharpest frame |
 
 ## The task engine is the source of truth
 
@@ -37,6 +40,7 @@ Models propose, the engine decides. Gemini can call:
 | Function | What the engine checks |
 | --- | --- |
 | `turn_on_camera`, `turn_off_camera` | the camera is off at the start; off is refused while a task is in progress |
+| `look_closely` | a question is given and the camera is on; answered when the photo has been looked at (see Close look) |
 | `get_task_state` | — (returns goal, steps with status, notes, recent observations and remarks) |
 | `create_task_plan` | goal not empty, 3–12 steps, each short; refuses to replace a task in progress unless `replace_current` |
 | `propose_plan_revision` | must start at the current step (completed steps are history, skipping is impossible); total ≤ 12 |
@@ -143,6 +147,55 @@ observation for the engine; a remark is relayed to Gemini Live (which says it
 in its own voice) only if the engine allows it: hazards at most every 5 s,
 mistakes every 15 s, never a repeat, never `info`. The coach is always on: it
 is what checks the steps; Gemini Live alone rarely looks unprompted.
+
+## Warnings that arrive
+
+Once the engine lets a remark through, it is recorded as said and never
+proposed again for that step, so a lost warning would be lost for good.
+`RemarkDelivery` keeps it until Genio's own words show it was said:
+
+- A coach remark is sent only when nobody is talking: Genio silent for 1 s,
+  the user for 1 s (hazard) or 2.5 s (mistake). One warning in the air at a
+  time, hazards first. A remark Gemini reports itself (`report_observation`
+  with `speak`) is watched the same way, without being sent.
+- The next turn Genio finishes is checked: the remark's key words (four
+  letters or more, not "attento", "careful" and the like, compared by their
+  first five letters) must be in its transcript, at least one and a third of
+  them. Gemini is asked to keep the key words.
+- An interrupted turn, a turn about something else, or nothing said within
+  10 s counts as not heard: the remark goes out once more ("the user did not
+  hear this warning"), then it is given up.
+- A remark expires (hazard 30 s, mistake 25 s after it was seen), and a
+  mistake is dropped when the step changes; a hazard is kept.
+- No silent step check runs while a warning waits or is in the air: the
+  check would mute Genio's reply, and the warning with it.
+
+The Log shows each one: "Warning", "Warning heard", "Warning not heard,
+saying it again", "Warning dropped".
+
+## Close look
+
+The live frames are small (≤ 768 px, about one a second) and often blurred by
+head movement: enough to follow a task, not to read a label. For a precise
+question (printed text, a model number, a screw size, whether a part is
+seated), Gemini calls `look_closely` after asking the user to hold still:
+
+1. `GlassesManager` asks the glasses for a photo (`stream.capturePhoto`,
+   JPEG) while the stream goes on, and meanwhile keeps the sharpest video
+   frame of the next 1.2 s (variance of the Laplacian on a 320 px grayscale
+   copy, `Sharpness`). The photo is used if it arrives within 4 s, scaled to
+   ≤ 2048 px; otherwise the sharpest frame. A failed photo
+   (`photoCaptureFailed`) does not restart the camera.
+2. `GeminiCloseLook` sends it with the question, the goal and the current
+   step to the coach's model at `MEDIA_RESOLUTION_HIGH`, with a JSON schema:
+   `answer`, `text_seen` (exactly as written), `confident`, `retry_hint`.
+3. The result goes back to Gemini Live as the function's answer. When not
+   confident, Gemini is told not to guess, to tell the user how to show it
+   better, and to look again.
+
+The call takes a few seconds, so it runs on its own task: the conversation's
+audio and events keep flowing, and the result is dropped if Gemini cancelled
+the call meanwhile. Silent checks and warnings wait until it is answered.
 
 ## Silent step checks
 

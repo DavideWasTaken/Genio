@@ -24,7 +24,8 @@
 - **One button.** Press the capture button on your glasses: GENIO wakes up and you just talk ("I'm making coffee with a moka pot", "help me assemble this shelf"). Say "Genio stop" to put it to sleep. The task is saved, even if you close the app, so the next press picks up where you left off.
 - **A natural conversation.** Genio runs on [Gemini Live](https://ai.google.dev/gemini-api/docs/live-api): it hears you through the glasses' microphone, sees through their camera and answers in its own voice on the glasses' speakers. Interrupt it any time, as you would a person.
 - **Step by step.** Gemini proposes a plan of 3 to 12 short steps; Genio's task engine validates it and guides you one step at a time. Say "done", "back", "new task", or ask "which screw?", "is this right?", "I have a different model": the plan adapts.
-- **It checks your work.** A step moves on when you say so, or when the camera shows it done *consistently*. Genio keeps looking while you work in silence, so you don't have to say "done". One look is never enough: Genio would rather wait a few seconds than skip a step you haven't finished. A separate vision coach (a fast Gemini model) looks every few seconds and points out clear mistakes or hazards, cautiously. Silence is the default.
+- **It checks your work.** A step moves on when you say so, or when the camera shows it done *consistently*. Genio keeps looking while you work in silence, so you don't have to say "done". One look is never enough: Genio would rather wait a few seconds than skip a step you haven't finished. A separate vision coach (a fast Gemini model) looks every few seconds and points out clear mistakes or hazards, cautiously. Silence is the default, but a warning is never lost: if you talk over it or Genio answers something else, it is said again once.
+- **It looks closely.** For the small things (the text on a label, a model number, which screw, whether a connector is fully in), Genio asks you to hold still, takes a photo with the glasses and reads it carefully at full resolution instead of guessing from the video. If it still can't tell, it says so and tells you how to show it better.
 - **It remembers.** Say "new task" and the old one is set aside, not lost: "let's pick up the bookshelf" resumes it at the step you left. Tell Genio lasting things ("I have a Bosch washing machine", "I'm left-handed") and it remembers them in later conversations; "forget the washing machine" removes them. All of it stays on the phone.
 - **Google Search built in.** Gemini searches the web when the answer depends on current facts (a match score, opening hours, news) or on the manual and specs of the exact model in front of you.
 - **A quiet screen.** The phone shows only what matters: GENIO's state, the glasses and, during a task, its name. The steps, like the rest of the conversation, happen in your ears.
@@ -103,12 +104,13 @@ There are no fixed commands: talk as you would to a person. These work in Englis
 | Remember something | "remember I'm left-handed" | "ricordati che sono mancino" |
 | Switch off | "Genio stop" | "Genio stop", "basta Genio" |
 | Questions | "which screw?", "is this right?", "I can't find the button" | "quale vite?", "è giusto così?", "non trovo il pulsante" |
+| Read something small | "what does the label say?", "what model is this?" | "cosa c'è scritto qui?", "che modello è?" |
 
 "Done", "back" and "new task" only count if the microphone transcript shows you said them: Gemini cannot invent them. "Genio stop" is recognised directly in the transcript and always switches GENIO off.
 
 ## Cost
 
-Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); while a step is in progress, the vision coach adds one small image request every few seconds and Genio sends a short "is the step done?" check to Gemini Live every 10 s of silence. Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
+Gemini Live is billed per token of audio, video and text (see [ai.google.dev/pricing](https://ai.google.dev/pricing)); while a step is in progress, the vision coach adds one small image request every few seconds and Genio sends a short "is the step done?" check to Gemini Live every 10 s of silence. A close look is one more image request, with a full-resolution photo. Settings → *Log* shows the session's tokens as Gemini reports them while GENIO is on.
 
 ## Status and caveats
 
@@ -132,7 +134,7 @@ There's no Genio server. Microphone audio, sampled camera frames, transcripts an
 
 | File | What it does |
 | --- | --- |
-| `Genio/GlassesManager.swift` | DAT SDK: registration, device session, camera (latest frame, off-main JPEG), button |
+| `Genio/GlassesManager.swift` | DAT SDK: registration, device session, camera (latest frame, off-main JPEG, close-look photo), button |
 | `Genio/LiveConversationEngine.swift` | The Gemini Live conversation: audio, video sampling, transcripts, function calls |
 | `Genio/AudioManager.swift` | Audio session and engine: HFP two-way audio, echo cancellation, playback, route checks |
 | `Genio/CoachEngine.swift` | The periodic vision coach |
@@ -143,9 +145,9 @@ There's no Genio server. Microphone audio, sampled camera frames, transcripts an
 | `Genio/ContentView.swift` · `SettingsView.swift` · `Theme.swift` | SwiftUI screens, audio and camera tests |
 | `Genio/Localizable.xcstrings` | Italian translation of the UI |
 | `Packages/GenioCore/Sources/GenioCore/Task` | `TaskEngine`, `CompletionVerifier`, `GenioTask`, memory (`MemorySummary`), persistence |
-| `Packages/GenioCore/Sources/GenioCore/Live` | Gemini Live wire format, `GeminiLiveSession`, `TaskTools`, instructions, `VoiceStop`, `StepCheckPolicy` |
-| `Packages/GenioCore/Sources/GenioCore/Coach` | `GeminiVisionCoach` (REST) and model selection |
-| `Packages/GenioCore/Sources/GenioCore/Media` | `FramePacer`, PCM helpers |
+| `Packages/GenioCore/Sources/GenioCore/Live` | Gemini Live wire format, `GeminiLiveSession`, `TaskTools`, instructions, `VoiceStop`, `StepCheckPolicy`, `RemarkDelivery` |
+| `Packages/GenioCore/Sources/GenioCore/Coach` | `GeminiVisionCoach` and `GeminiCloseLook` (REST), model selection |
+| `Packages/GenioCore/Sources/GenioCore/Media` | `FramePacer`, PCM helpers, `Sharpness` |
 | `tools/make_icon.py` | Draws the app icon |
 
 ## Credits

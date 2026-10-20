@@ -61,6 +61,8 @@ final class GlassesManager: ObservableObject {
   /// `.started` cannot start a second round of requests.
   private var preparing = false
   private let latest = LatestFrame()
+  /// The photo a close look asked for (see closeLookImage).
+  private let photoBox = PhotoBox()
   /// Who needs the camera now ("genio", "test"); empty: it is paused.
   private var cameraUsers: Set<String> = []
   /// The current Inputs reached `.active` at least once.
@@ -321,6 +323,10 @@ final class GlassesManager: ObservableObject {
           }
         }
       }.store(in: tokens)
+      let photoBox = self.photoBox
+      newCamera.stream.photoDataPublisher.listen { photo in
+        photoBox.deliver(photo.data)
+      }.store(in: tokens)
       newCamera.stream.statePublisher.listen { [weak self] state in
         Task { @MainActor in
           // Events from a camera already replaced by a restart are stale.
@@ -346,6 +352,13 @@ final class GlassesManager: ObservableObject {
       newCamera.stream.errorPublisher.listen { [weak self] error in
         Task { @MainActor in
           guard let self, self.camera === newCamera else { return }
+          if error == .photoCaptureFailed {
+            // Only the photo failed: the stream goes on, the close look
+            // falls back to the video.
+            self.log("Camera: photo failed")
+            photoBox.fail()
+            return
+          }
           self.log("Camera error: \(error)")
           self.restartCamera(on: session, reason: "\(error)")
         }
@@ -465,6 +478,77 @@ final class GlassesManager: ObservableObject {
     }.value
   }
 
+  // MARK: - Close look
+
+  /// A sharp still for a close look (look_closely), as a JPEG at most
+  /// `maxDimension` pixels on its long side: a photo from the glasses (far
+  /// more detail than the medium video stream) if it arrives in time, else
+  /// the sharpest video frame of the next second or so. Nil if the camera is
+  /// not streaming. `source` is "photo" or "frame".
+  func closeLookImage(maxDimension: CGFloat = 2048) async -> (data: Data, source: String)? {
+    guard let camera, cameraActive else { return nil }
+    photoBox.expect()
+    let asked = camera.stream.capturePhoto(format: .jpeg)
+    log(asked ? "Close look: photo requested" : "Close look: no photo (refused), using the video")
+    if !asked { photoBox.fail() }
+    // Meanwhile, the user holds still: keep the sharpest frame as a fallback.
+    let best = await sharpestFrame(over: 1.2)
+    let photo = asked ? await photoBox.wait(until: Date().addingTimeInterval(4)) : nil
+    photoBox.reset()
+    if let photo {
+      let encoded = await Task.detached(priority: .userInitiated) { () -> Data? in
+        guard let image = UIImage(data: photo) else { return nil }
+        return Self.scaled(image, maxDimension: maxDimension).jpegData(compressionQuality: 0.85)
+      }.value
+      if let encoded {
+        log("Close look: photo \(photo.count / 1024) KB")
+        return (data: encoded, source: "photo")
+      }
+    }
+    guard let best else { return nil }
+    log("Close look: photo not received, using the sharpest frame")
+    let box = FrameBox(frame: best)
+    let encoded = await Task.detached(priority: .userInitiated) { () -> Data? in
+      box.frame.makeUIImage()?.jpegData(compressionQuality: 0.9)
+    }.value
+    return encoded.map { (data: $0, source: "frame") }
+  }
+
+  /// The sharpest of the frames arriving during `seconds` (the current one
+  /// included if it is recent), or nil if none came.
+  private func sharpestFrame(over seconds: TimeInterval) async -> VideoFrame? {
+    var best: (frame: VideoFrame, score: Double)?
+    var lastSeen: Date?
+    let end = Date().addingTimeInterval(seconds)
+    while Date() < end {
+      if let snapshot = latest.get(), snapshot.arrivedAt != lastSeen, Date().timeIntervalSince(snapshot.arrivedAt) < 3 {
+        lastSeen = snapshot.arrivedAt
+        let box = FrameBox(frame: snapshot.frame)
+        let score = await Task.detached(priority: .userInitiated) { Self.sharpness(of: box.frame) }.value
+        if score > (best?.score ?? -1) { best = (snapshot.frame, score) }
+      }
+      try? await Task.sleep(for: .milliseconds(60))
+    }
+    return best?.frame
+  }
+
+  /// Sharpness of a frame (see Sharpness), on a small grayscale copy.
+  nonisolated private static func sharpness(of frame: VideoFrame) -> Double {
+    guard let image = frame.makeUIImage(), let small = scaled(image, maxDimension: 320).cgImage else { return 0 }
+    let width = small.width
+    let height = small.height
+    var pixels = [UInt8](repeating: 0, count: width * height)
+    let drawn = pixels.withUnsafeMutableBytes { buffer -> Bool in
+      guard let context = CGContext(
+        data: buffer.baseAddress, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width,
+        space: CGColorSpaceCreateDeviceGray(), bitmapInfo: CGImageAlphaInfo.none.rawValue)
+      else { return false }
+      context.draw(small, in: CGRect(x: 0, y: 0, width: width, height: height))
+      return true
+    }
+    return drawn ? Sharpness.score(gray: pixels, width: width, height: height) : 0
+  }
+
   nonisolated private static func scaled(_ image: UIImage, maxDimension: CGFloat) -> UIImage {
     let longest = max(image.size.width, image.size.height)
     guard longest > maxDimension, longest > 0 else { return image }
@@ -537,6 +621,61 @@ final class GlassesManager: ObservableObject {
 /// immutable once delivered).
 private struct FrameBox: @unchecked Sendable {
   let frame: VideoFrame
+}
+
+/// The photo a close look is waiting for. Written from the SDK's thread when
+/// the photo (or its failure) arrives; a photo nobody asked for (none
+/// expected) is ignored.
+final class PhotoBox: @unchecked Sendable {
+  private let lock = NSLock()
+  private var expecting = false
+  private var failed = false
+  private var data: Data?
+
+  func expect() {
+    lock.lock()
+    expecting = true
+    failed = false
+    data = nil
+    lock.unlock()
+  }
+
+  func deliver(_ photo: Data) {
+    lock.lock()
+    if expecting, data == nil { data = photo }
+    lock.unlock()
+  }
+
+  func fail() {
+    lock.lock()
+    if expecting { failed = true }
+    lock.unlock()
+  }
+
+  func reset() {
+    lock.lock()
+    expecting = false
+    failed = false
+    data = nil
+    lock.unlock()
+  }
+
+  /// The photo, or nil if it failed or `deadline` passed first.
+  func wait(until deadline: Date) async -> Data? {
+    while Date() < deadline {
+      let (photo, gaveUp) = peek()
+      if let photo { return photo }
+      if gaveUp { return nil }
+      try? await Task.sleep(for: .milliseconds(100))
+    }
+    return peek().photo
+  }
+
+  private func peek() -> (photo: Data?, failed: Bool) {
+    lock.lock()
+    defer { lock.unlock() }
+    return (data, failed)
+  }
 }
 
 /// The newest camera frame and when it arrived. Written from the SDK's

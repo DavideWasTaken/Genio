@@ -21,6 +21,7 @@ public final class TaskTools {
     case pauseGuidance = "pause_guidance"
     case turnOnCamera = "turn_on_camera"
     case turnOffCamera = "turn_off_camera"
+    case lookClosely = "look_closely"
     case listSavedTasks = "list_saved_tasks"
     case resumeTask = "resume_task"
     case rememberFact = "remember_fact"
@@ -40,6 +41,19 @@ public final class TaskTools {
   public var onCameraRequest: ((Bool) -> Bool)?
   /// Whether the camera is streaming now.
   public var cameraIsOn: () -> Bool = { false }
+  /// Takes a sharp still and asks a vision model `question` about it (see
+  /// look_closely). Nil: close looks are not available.
+  public var onCloseLook: ((String) async -> CloseLookResult)?
+
+  /// What the app's close look produced.
+  public enum CloseLookResult: Equatable, Sendable {
+    /// `source`: "photo" (taken by the glasses) or "frame" (the sharpest
+    /// recent video frame).
+    case answer(CloseLookAnswer, source: String)
+    /// No usable image (camera stopped, no recent frame).
+    case noImage
+    case failed(String)
+  }
 
   public init(engine: TaskEngine) {
     self.engine = engine
@@ -120,6 +134,13 @@ public final class TaskTools {
         description: "Turns the glasses camera off when the practical part is over and the conversation no longer needs it, to save battery. A task in progress keeps it on.",
         parameters: nil, behavior: .blocking),
       FunctionDeclaration(
+        name: Name.lookClosely.rawValue,
+        description: "Takes a sharp, high-resolution photo with the glasses and looks at it carefully to answer a precise question: printed text, a model or part number, a size, which screw or cable, whether a part is fully seated or faces the right way. The live frames are small and often blurred: use this instead of guessing about small details. Before calling, tell the user in a few words to hold still and bring it close (\"Fammi vedere da vicino, stai fermo un attimo\"). It takes a few seconds. The camera must be on.",
+        parameters: .object(properties: [
+          ("question", .string(description: "What exactly to find out, in English, e.g. \"What model number is printed on the label?\".")),
+        ], required: ["question"]),
+        behavior: .blocking),
+      FunctionDeclaration(
         name: Name.listSavedTasks.rawValue,
         description: "Lists earlier tasks that were not finished (set aside with \"new task\", or interrupted), newest first, with their progress and id. Call it when the user wants to pick up something they were doing.",
         parameters: nil, behavior: .blocking),
@@ -172,8 +193,22 @@ public final class TaskTools {
     case .forgetFact: result = forgetFact(call.args)
     case .turnOnCamera: result = camera(on: true)
     case .turnOffCamera: result = camera(on: false)
+    case .lookClosely: result = refused("look_closely takes a few seconds and is answered on its own")
     case nil: result = refused("unknown function \(call.name)")
     }
+    return FunctionResponse(id: call.id, name: call.name, response: .object(result))
+  }
+
+  /// Whether a call takes time (a photo and a vision request): the caller
+  /// runs it with `handleSlow` without holding up the conversation.
+  public nonisolated static func isSlow(_ call: FunctionCall) -> Bool {
+    call.name == Name.lookClosely.rawValue
+  }
+
+  /// Runs a slow call (see `isSlow`); any other call is handled at once.
+  public func handleSlow(_ call: FunctionCall) async -> FunctionResponse {
+    guard Self.isSlow(call) else { return handle(call) }
+    let result = await closeLook(call.args)
     return FunctionResponse(id: call.id, name: call.name, response: .object(result))
   }
 
@@ -269,6 +304,34 @@ public final class TaskTools {
     return accepted(["camera": .string("off")])
   }
 
+  private func closeLook(_ args: JSONValue) async -> [String: JSONValue] {
+    guard let question = args["question"]?.stringValue, !question.trimmingCharacters(in: .whitespaces).isEmpty else {
+      return refused("question is missing")
+    }
+    guard let onCloseLook else { return refused("close looks are not available. Answer from the live frames, saying you are not sure.") }
+    guard cameraIsOn() else { return refused("the camera is off. Call turn_on_camera first, then look_closely again.") }
+    switch await onCloseLook(question) {
+    case .answer(let found, let source):
+      var result = accepted([
+        "answer": .string(found.answer),
+        "text_seen": .string(found.textSeen),
+        "confident": .bool(found.confident),
+        "image": .string(source),
+      ])
+      if found.confident {
+        result["instruction"] = .string("Tell the user the answer in one or two short sentences, quoting text and numbers exactly. If it shows a step done or a mistake, use the functions as usual.")
+      } else {
+        result["retry_hint"] = .string(found.retryHint)
+        result["instruction"] = .string("The photo did not show it clearly. Do not guess: say so briefly, tell the user how to show it better (retry_hint), then call look_closely again.")
+      }
+      return result
+    case .noImage:
+      return refused("there was no sharp image to look at (the camera has no recent frame). Ask the user to look at it again, then retry.")
+    case .failed(let why):
+      return refused("the close look failed (\(why)). Answer from the live frames if you can, and say you are not sure.")
+    }
+  }
+
   private func revise(_ args: JSONValue) -> [String: JSONValue] {
     guard let from = args["from_step"]?.intValue else { return refused("from_step must be an integer") }
     guard let steps = strings(args["steps"]) else { return refused("steps must be a list of strings") }
@@ -313,7 +376,7 @@ public final class TaskTools {
     result["speak"] = .bool(speak)
     if outcome != .confirmed {
       result["instruction"] = .string(speak
-        ? "Say it now, briefly and cautiously (\"careful\", \"check that…\"): you may be wrong."
+        ? "Say it now, briefly and cautiously (\"careful\", \"check that…\"), keeping the key words of your message: you may be wrong."
         : "Stay silent.")
     }
     return result
